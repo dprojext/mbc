@@ -6,14 +6,18 @@ import About from '../components/About';
 import Membership from '../components/Membership';
 import Contact from '../components/Contact';
 import Footer from '../components/Footer';
-import { useData } from '../context/DataContext';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const Home = () => {
     const { incrementViewCount } = useData();
+    const { user } = useAuth();
+    const navigate = useNavigate();
 
     useEffect(() => {
         incrementViewCount();
-    }, []);
+        if (user) navigate('/dashboard');
+    }, [user]);
 
     return (
         <div className="home-page">
