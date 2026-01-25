@@ -21,30 +21,39 @@ const UserChat = () => {
         }
     }, [messages, myConvo]);
 
+    const [isSending, setIsSending] = useState(false);
+
     const handleSend = async () => {
-        if (!newMessage.trim()) return;
+        if (!newMessage.trim() || isSending) return;
+        setIsSending(true);
 
-        let convoId = myConvo?.id;
+        try {
+            let convoId = myConvo?.id;
 
-        // If no conversation exists yet, create one
-        if (!convoId) {
-            const newConvo = await addConversation({
-                customerName: user.name,
-                customerId: user.id,
-                lastMessage: newMessage.trim(),
-                lastMessageTime: new Date().toISOString()
-            });
-            if (newConvo) convoId = newConvo.id;
-        }
+            // If no conversation exists yet, create one
+            if (!convoId) {
+                const newConvo = await addConversation({
+                    customerName: user.name,
+                    customerId: user.id,
+                    lastMessage: newMessage.trim(),
+                    lastMessageTime: new Date().toISOString()
+                });
+                if (newConvo) convoId = newConvo.id;
+            }
 
-        if (convoId) {
-            await sendMessage({
-                conversationId: convoId,
-                sender: 'user',
-                text: newMessage.trim(),
-                timestamp: new Date().toISOString()
-            });
-            setNewMessage('');
+            if (convoId) {
+                await sendMessage({
+                    conversationId: convoId,
+                    sender: 'user',
+                    text: newMessage.trim(),
+                    timestamp: new Date().toISOString()
+                });
+                setNewMessage('');
+            }
+        } catch (error) {
+            console.error("Chat dispatch failure:", error);
+        } finally {
+            setIsSending(false);
         }
     };
 
@@ -167,20 +176,21 @@ const UserChat = () => {
                         />
                         <button
                             onClick={handleSend}
-                            disabled={!newMessage.trim()}
+                            disabled={!newMessage.trim() || isSending}
                             style={{
                                 width: '50px',
                                 height: '50px',
                                 borderRadius: '12px',
-                                background: newMessage.trim() ? 'var(--color-gold)' : '#222',
-                                color: newMessage.trim() ? '#000' : '#444',
+                                background: (newMessage.trim() && !isSending) ? 'var(--color-gold)' : '#222',
+                                color: (newMessage.trim() && !isSending) ? '#000' : '#444',
                                 border: 'none',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 fontSize: '1.2rem',
-                                cursor: newMessage.trim() ? 'pointer' : 'not-allowed',
-                                transition: '0.3s'
+                                cursor: (newMessage.trim() && !isSending) ? 'pointer' : 'not-allowed',
+                                transition: '0.3s',
+                                opacity: isSending ? 0.6 : 1
                             }}
                         >
                             <FiSend />

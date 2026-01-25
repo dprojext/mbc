@@ -1,12 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useSearchParams } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
-import { FiCalendar, FiCheckCircle, FiUser, FiUsers, FiTruck, FiMapPin, FiClock, FiMessageSquare, FiArrowRight, FiChevronDown, FiMap, FiShield, FiZap } from 'react-icons/fi';
+import {
+    FiCalendar, FiCheckCircle, FiUser, FiUsers, FiTruck,
+    FiMapPin, FiClock, FiMessageSquare, FiArrowRight,
+    FiChevronDown, FiMap, FiShield, FiZap, FiPhone
+} from 'react-icons/fi';
 
 const Booking = () => {
     const { services, plans, addBooking, bookings = [] } = useData();
     const { user } = useAuth();
+    const [searchParams] = useSearchParams();
 
     const [bookingFor, setBookingFor] = useState('myself');
     const [vehicleChoice, setVehicleChoice] = useState('previous');
@@ -29,6 +35,14 @@ const Booking = () => {
         location: '',
         notes: ''
     });
+
+    // Handle URL parameters (e.g., ?service=Signature+Wash)
+    useEffect(() => {
+        const serviceParam = searchParams.get('service');
+        if (serviceParam) {
+            setFormData(prev => ({ ...prev, service: serviceParam }));
+        }
+    }, [searchParams]);
 
     const showContactFields = bookingFor === 'other' || (!user?.name || !user?.phone);
 
@@ -55,10 +69,11 @@ const Booking = () => {
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
+        if (name === 'location') setIsLocationConfirmed(false);
     };
 
     const handleMapConfirm = () => {
-        const confirmedLocation = "Bole Medhanialem, Street 14 (Exact Pin)";
+        const confirmedLocation = "Bole Medhanialem, Street 14 (Verified Pin)";
         setFormData(prev => ({ ...prev, location: confirmedLocation }));
         setIsLocationConfirmed(true);
         setShowMap(false);
@@ -80,13 +95,9 @@ const Booking = () => {
     const closeModal = () => setModalOpen(false);
     const today = new Date().toISOString().split('T')[0];
 
-    const timeSlots = [];
-    for (let hour = 8; hour <= 19; hour++) {
-        const h = hour > 12 ? hour - 12 : hour;
-        const ampm = hour >= 12 ? 'PM' : 'AM';
-        timeSlots.push(`${h}:00 ${ampm}`);
-        timeSlots.push(`${h}:30 ${ampm}`);
-    }
+    // Refined Time Slots for appealing grid
+    const morningSlots = ['8:00 AM', '9:30 AM', '11:00 AM'];
+    const afternoonSlots = ['1:00 PM', '2:30 PM', '4:00 PM', '5:30 PM'];
 
     const benefits = [
         { icon: <FiShield />, title: 'Professional Insurance', desc: 'Full multi-point liability coverage.' },
@@ -186,7 +197,7 @@ const Booking = () => {
                                             <input name="phone" value={formData.phone} onChange={handleChange} required placeholder="+251..."
                                                 style={{ width: '100%', padding: '0.8rem 1rem 0.8rem 2.8rem', background: '#111', border: '1px solid #333', borderRadius: '10px', color: '#fff', outline: 'none' }}
                                             />
-                                            <FiCheckCircle style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#555' }} />
+                                            <FiPhone style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#555' }} />
                                         </div>
                                     </div>
                                 </div>
@@ -239,28 +250,43 @@ const Booking = () => {
                                 </div>
                             </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
-                                <div className="form-input-group">
-                                    <label style={{ color: '#888', fontSize: '0.75rem', marginBottom: '0.5rem', display: 'block' }}>Preferred Date</label>
-                                    <div style={{ position: 'relative' }}>
-                                        <input type="date" name="date" min={today} value={formData.date} onChange={handleChange} required
-                                            style={{ width: '100%', padding: '0.8rem', background: '#111', border: '1px solid #333', borderRadius: '10px', color: '#fff', paddingLeft: '2.8rem' }}
-                                        />
-                                        <FiCalendar style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#555' }} />
-                                    </div>
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <label style={{ color: '#888', fontSize: '0.75rem', marginBottom: '0.8rem', display: 'block' }}>Preferred Date</label>
+                                <div style={{ position: 'relative' }}>
+                                    <input type="date" name="date" min={today} value={formData.date} onChange={handleChange} required
+                                        style={{
+                                            width: '100%', padding: '0.8rem 1rem 0.8rem 2.8rem', background: '#111', border: '1px solid #333',
+                                            borderRadius: '10px', color: '#fff'
+                                        }}
+                                    />
+                                    <FiCalendar style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#555' }} />
                                 </div>
-                                <div className="form-input-group">
-                                    <label style={{ color: '#888', fontSize: '0.75rem', marginBottom: '0.5rem', display: 'block' }}>Preferred Time</label>
-                                    <div style={{ position: 'relative' }}>
-                                        <select name="time" value={formData.time} onChange={handleChange} required
-                                            style={{ width: '100%', padding: '0.8rem 1rem 0.8rem 2.8rem', background: '#111', border: '1px solid #333', borderRadius: '10px', color: '#fff', appearance: 'none' }}
+                            </div>
+
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <label style={{ color: '#888', fontSize: '0.75rem', marginBottom: '0.8rem', display: 'block' }}>Preferred Time</label>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem' }}>
+                                    {[...morningSlots, ...afternoonSlots].map(slot => (
+                                        <button
+                                            key={slot}
+                                            type="button"
+                                            onClick={() => setFormData(prev => ({ ...prev, time: slot }))}
+                                            style={{
+                                                padding: '0.6rem 1rem',
+                                                borderRadius: '8px',
+                                                fontSize: '0.8rem',
+                                                cursor: 'pointer',
+                                                transition: '0.3s',
+                                                background: formData.time === slot ? 'var(--color-gold)' : 'rgba(255,255,255,0.03)',
+                                                border: '1px solid',
+                                                borderColor: formData.time === slot ? 'var(--color-gold)' : '#222',
+                                                color: formData.time === slot ? '#000' : '#888',
+                                                fontWeight: formData.time === slot ? 'bold' : 'normal'
+                                            }}
                                         >
-                                            <option value="">Select time...</option>
-                                            {timeSlots.map(slot => <option key={slot} value={slot}>{slot}</option>)}
-                                        </select>
-                                        <FiClock style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#555' }} />
-                                        <FiChevronDown style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#555' }} />
-                                    </div>
+                                            {slot}
+                                        </button>
+                                    ))}
                                 </div>
                             </div>
 

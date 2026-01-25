@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 
 const iconMap = {
@@ -102,12 +103,12 @@ const Services = () => {
                                         <li key={idx}>{feature}</li>
                                     ))}
                                 </ul>
-                                <a href="#booking" className="service-link">
+                                <Link to={`/booking?service=${encodeURIComponent(service.title)}`} className="service-link">
                                     <span>Book This Service</span>
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                         <path d="M5 12h14M12 5l7 7-7 7" />
                                     </svg>
-                                </a>
+                                </Link>
                             </div>
                         </motion.div>
                     ))}

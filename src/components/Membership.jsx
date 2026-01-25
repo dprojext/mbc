@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 import { FiStar, FiCheckCircle } from 'react-icons/fi';
 
@@ -135,14 +136,14 @@ const Membership = () => {
                                         </li>
                                     ))}
                                 </ul>
-                                <a
-                                    href="#booking"
+                                <Link
+                                    to={`/booking?service=${encodeURIComponent(plan.name)}`}
                                     className={index === featuredIndex ? "btn btn-primary plan-btn" : "btn btn-secondary plan-btn"}
                                 >
                                     {index === featuredIndex ? <FiStar className="btn-icon" /> : <FiCheckCircle className="btn-icon" />}
                                     <span>{plan.type === 'subscription' ? 'Select Plan' : 'Book Now'}</span>
                                     {index === featuredIndex && <div className="btn-shine"></div>}
-                                </a>
+                                </Link>
                             </div>
                         </motion.div>
                     ))}
