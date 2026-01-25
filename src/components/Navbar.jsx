@@ -198,6 +198,22 @@ const Navbar = () => {
                                             <FiUser size={14} color="var(--color-gold)" /> Profile Settings
                                         </RouterLink>
 
+                                        {user?.role === 'admin' && (
+                                            <RouterLink
+                                                to="/admin"
+                                                className="dropdown-item"
+                                                onClick={() => setProfileOpen(false)}
+                                                style={{
+                                                    width: '100%', padding: '0.8rem', background: 'none', border: 'none',
+                                                    color: 'var(--color-gold)', display: 'flex', alignItems: 'center', gap: '0.8rem',
+                                                    fontSize: '0.9rem', textDecoration: 'none', borderRadius: '8px',
+                                                    fontWeight: '600'
+                                                }}
+                                            >
+                                                <FiZap size={14} color="var(--color-gold)" /> Admin Panel
+                                            </RouterLink>
+                                        )}
+
                                         <button
                                             onClick={handleLogout}
                                             className="dropdown-item"

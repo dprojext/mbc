@@ -21,9 +21,13 @@ const Booking = () => {
     const [isLocationConfirmed, setIsLocationConfirmed] = useState(false);
     const [timePeriod, setTimePeriod] = useState('AM');
 
-    // Find previous vehicles for this user
+    // Combine previous booking data with saved profile data
     const userPrevBookings = bookings.filter(b => b.customer_id === user?.id || b.email === user?.email);
-    const prevVehicles = [...new Set(userPrevBookings.map(b => b.vehicleType).filter(Boolean))];
+    const historyVehicles = [...new Set(userPrevBookings.map(b => b.vehicleType).filter(Boolean))];
+    const profileVehicles = user?.savedVehicles || [];
+    const prevVehicles = [...new Set([...profileVehicles, ...historyVehicles])];
+
+    const profileAddresses = user?.savedAddresses || [];
 
     const [formData, setFormData] = useState({
         fullName: user?.name || '',
@@ -33,7 +37,7 @@ const Booking = () => {
         service: '',
         date: '',
         time: '',
-        location: '',
+        location: profileAddresses[0] || '',
         notes: ''
     });
 
@@ -322,7 +326,20 @@ const Booking = () => {
                             </div>
 
                             <div style={{ marginBottom: '1.5rem' }}>
-                                <label style={{ color: '#888', fontSize: '0.75rem', marginBottom: '0.5rem', display: 'block' }}>Service Location</label>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                    <label style={{ color: '#888', fontSize: '0.75rem', display: 'block' }}>Service Location</label>
+                                    {bookingFor === 'myself' && profileAddresses.length > 0 && (
+                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                            <select
+                                                onChange={(e) => setFormData(p => ({ ...p, location: e.target.value }))}
+                                                style={{ background: 'none', border: 'none', color: 'var(--color-gold)', fontSize: '0.7rem', cursor: 'pointer', outline: 'none' }}
+                                            >
+                                                <option value="" style={{ background: '#111' }}>Use Saved Address...</option>
+                                                {profileAddresses.map(a => <option key={a} value={a} style={{ background: '#111' }}>{a}</option>)}
+                                            </select>
+                                        </div>
+                                    )}
+                                </div>
                                 <div style={{ display: 'flex', gap: '0.8rem', marginBottom: showMap ? '1rem' : '0' }}>
                                     <div style={{ position: 'relative', flex: 1 }}>
                                         <input name="location" value={formData.location} onChange={handleChange} required placeholder="Search address..."

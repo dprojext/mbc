@@ -153,10 +153,26 @@ export const AuthProvider = ({ children }) => {
 
     const refreshProfile = async () => {
         if (!user) return;
-        const { data: profile } = await supabase.from('profiles').select('role, requires_password_change').eq('id', user.id).single();
-        if (profile) {
-            setUser(prev => ({ ...prev, role: profile.role, requiresPasswordChange: profile.requires_password_change }));
-        }
+        try {
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('role, requires_password_change, display_name, phone, subscription_plan, saved_vehicles, saved_addresses')
+                .eq('id', user.id)
+                .single();
+
+            if (profile) {
+                setUser(prev => ({
+                    ...prev,
+                    role: profile.role,
+                    name: profile.display_name,
+                    phone: profile.phone,
+                    subscriptionPlan: profile.subscription_plan,
+                    savedVehicles: profile.saved_vehicles || [],
+                    savedAddresses: profile.saved_addresses || [],
+                    requiresPasswordChange: profile.requires_password_change
+                }));
+            }
+        } catch (err) { console.error("[AUTH] Refresh Profile Error:", err); }
     };
 
     return (

@@ -167,6 +167,9 @@ export const DataProvider = ({ children }) => {
                     setUsers(fetchedUsers.map(u => ({
                         ...u,
                         name: u.display_name || 'Anonymous',
+                        savedVehicles: u.saved_vehicles || [],
+                        savedAddresses: u.saved_addresses || [],
+                        subscriptionPlan: u.subscription_plan || 'None',
                         requests: Array.isArray(u.requests) ? u.requests : []
                     })));
                 }
@@ -400,8 +403,16 @@ export const DataProvider = ({ children }) => {
     const updateUsers = async (newUsers) => {
         setUsers(newUsers);
         try {
-            for (const user of newUsers) {
-                await supabase.from('profiles').upsert({ ...user, display_name: user.name });
+            for (const u of newUsers) {
+                await supabase.from('profiles').upsert({
+                    id: u.id,
+                    display_name: u.name,
+                    phone: u.phone,
+                    role: u.role,
+                    subscription_plan: u.subscriptionPlan,
+                    saved_vehicles: u.savedVehicles || [],
+                    saved_addresses: u.savedAddresses || []
+                });
             }
         } catch (err) { console.error("Update Users Error:", err); }
     };

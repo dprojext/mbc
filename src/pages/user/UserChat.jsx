@@ -28,10 +28,13 @@ const UserChat = () => {
         setIsSending(true);
 
         try {
-            let convoId = myConvo?.id;
+            // Priority check for conversation (supports both DB snake_case and memory camelCase)
+            let convo = conversations.find(c => (c.customer_id === user?.id) || (c.customerId === user?.id));
+            let convoId = convo?.id;
 
             // If no conversation exists yet, create one
             if (!convoId) {
+                console.log("[CHAT] Creating new executive conversation...");
                 const newConvo = await addConversation({
                     customerName: user.name,
                     customerId: user.id,
@@ -42,6 +45,7 @@ const UserChat = () => {
             }
 
             if (convoId) {
+                console.log("[CHAT] Sending message to:", convoId);
                 await sendMessage({
                     conversationId: convoId,
                     sender: 'user',
@@ -49,9 +53,11 @@ const UserChat = () => {
                     timestamp: new Date().toISOString()
                 });
                 setNewMessage('');
+            } else {
+                console.error("[CHAT] Failed to establish conversation ID.");
             }
         } catch (error) {
-            console.error("Chat dispatch failure:", error);
+            console.error("[CHAT] Dispatch failure:", error);
         } finally {
             setIsSending(false);
         }

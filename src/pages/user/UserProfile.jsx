@@ -19,6 +19,11 @@ const UserProfile = () => {
         confirmPassword: ''
     });
 
+    const [vehicles, setVehicles] = useState(user?.savedVehicles || []);
+    const [addresses, setAddresses] = useState(user?.savedAddresses || []);
+    const [newVehicle, setNewVehicle] = useState('');
+    const [newAddress, setNewAddress] = useState('');
+
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
@@ -42,7 +47,9 @@ const UserProfile = () => {
                 .from('profiles')
                 .update({
                     name: formData.name,
-                    phone: formData.phone
+                    phone: formData.phone,
+                    saved_vehicles: vehicles,
+                    saved_addresses: addresses
                 })
                 .eq('id', user.id);
 
@@ -210,17 +217,53 @@ const UserProfile = () => {
                         </form>
                     </div>
 
-                    {/* Account Deletion */}
-                    <div className="admin-card" style={{ border: '1px solid rgba(255,68,68,0.2)', background: 'rgba(255,68,68,0.02)' }}>
-                        <h3 style={{ color: '#ff4444', fontSize: '1rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-                            <FiAlertCircle /> Danger Zone
+                    {/* Saved Assets */}
+                    <div className="admin-card">
+                        <h3 style={{ color: '#fff', fontSize: '1.1rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                            <FiSave color="var(--color-gold)" /> Saved Vehicles
                         </h3>
-                        <p style={{ color: '#888', fontSize: '0.85rem', marginBottom: '1.5rem', lineHeight: '1.5' }}>
-                            Permanently delete your account and all associated data. This action cannot be undone.
-                        </p>
-                        <button className="btn btn-secondary" style={{ color: '#ff4444', borderColor: 'rgba(255,68,68,0.3)', width: '100%' }}>
-                            Delete Membership
-                        </button>
+                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                            <input
+                                value={newVehicle}
+                                onChange={(e) => setNewVehicle(e.target.value)}
+                                placeholder="e.g. 2024 BMW M4"
+                                style={{ flex: 1, padding: '0.6rem', background: '#050505', border: '1px solid #333', borderRadius: '8px', color: '#fff' }}
+                            />
+                            <button
+                                onClick={() => { if (newVehicle) { setVehicles([...vehicles, newVehicle]); setNewVehicle(''); } }}
+                                className="btn btn-primary" style={{ padding: '0.5rem 1rem', fontSize: '0.7rem' }}
+                            >Add</button>
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '2rem' }}>
+                            {vehicles.map((v, i) => (
+                                <span key={i} style={{ padding: '0.4rem 0.8rem', background: 'rgba(201,169,106,0.1)', border: '1px solid rgba(201,169,106,0.2)', borderRadius: '20px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    {v} <button onClick={() => setVehicles(vehicles.filter((_, idx) => idx !== i))} style={{ background: 'none', border: 'none', color: '#ff4444', cursor: 'pointer', padding: 0 }}>×</button>
+                                </span>
+                            ))}
+                        </div>
+
+                        <h3 style={{ color: '#fff', fontSize: '1.1rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                            Saved Addresses
+                        </h3>
+                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                            <input
+                                value={newAddress}
+                                onChange={(e) => setNewAddress(e.target.value)}
+                                placeholder="Street, Building, Door"
+                                style={{ flex: 1, padding: '0.6rem', background: '#050505', border: '1px solid #333', borderRadius: '8px', color: '#fff' }}
+                            />
+                            <button
+                                onClick={() => { if (newAddress) { setAddresses([...addresses, newAddress]); setNewAddress(''); } }}
+                                className="btn btn-primary" style={{ padding: '0.5rem 1rem', fontSize: '0.7rem' }}
+                            >Add</button>
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                            {addresses.map((a, i) => (
+                                <span key={i} style={{ padding: '0.4rem 0.8rem', background: 'rgba(255,255,255,0.03)', border: '1px solid #333', borderRadius: '20px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    {a} <button onClick={() => setAddresses(addresses.filter((_, idx) => idx !== i))} style={{ background: 'none', border: 'none', color: '#ff4444', cursor: 'pointer', padding: 0 }}>×</button>
+                                </span>
+                            ))}
+                        </div>
                     </div>
                 </div>
             </div>
