@@ -398,6 +398,10 @@ h6 {
     transition: var(--transition-base);
 }
 
+.mobile-auth-actions {
+    display: none;
+}
+
 /* ============================================
    BUTTONS
    ============================================ */

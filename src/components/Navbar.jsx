@@ -72,8 +72,33 @@ const Navbar = () => {
                 {/* Content Menu & Mobile Actions */}
                 <div className={`nav-menu-wrapper ${isOpen ? 'active' : ''}`}>
                     <ul className="nav-menu">
-                        {navLinks}
-                        {user && (
+                        {/* Always Home */}
+                        <li>
+                            {isHomePage ? (
+                                <Link to="hero" smooth={true} duration={500} className="nav-link" onClick={() => setIsOpen(false)}>Home</Link>
+                            ) : (
+                                <RouterLink to="/" className="nav-link" onClick={() => setIsOpen(false)}>Home</RouterLink>
+                            )}
+                        </li>
+
+                        {!user ? (
+                            <>
+                                <li>
+                                    {isHomePage ? (
+                                        <Link to="services" smooth={true} duration={500} className="nav-link" onClick={() => setIsOpen(false)}>Services</Link>
+                                    ) : (
+                                        <RouterLink to="/#services" className="nav-link" onClick={() => setIsOpen(false)}>Services</RouterLink>
+                                    )}
+                                </li>
+                                <li>
+                                    {isHomePage ? (
+                                        <Link to="subscriptions" smooth={true} duration={500} className="nav-link" onClick={() => setIsOpen(false)}>Membership</Link>
+                                    ) : (
+                                        <RouterLink to="/#subscriptions" className="nav-link" onClick={() => setIsOpen(false)}>Membership</RouterLink>
+                                    )}
+                                </li>
+                            </>
+                        ) : (
                             <>
                                 <li><RouterLink to="/dashboard" className="nav-link" onClick={() => setIsOpen(false)}>My Garage</RouterLink></li>
                                 <li><RouterLink to="/booking" className="nav-link" onClick={() => setIsOpen(false)}>Book Service</RouterLink></li>
@@ -84,36 +109,36 @@ const Navbar = () => {
                         )}
                     </ul>
 
-                    {/* Mobile Only: Auth Actions */}
+                    {/* Mobile Only: Auth Actions (Hidden on Desktop via CSS) */}
                     {!user && (
                         <div className="mobile-auth-actions">
                             <RouterLink to="/login" className="nav-link" onClick={() => setIsOpen(false)}>Sign In</RouterLink>
-                            <RouterLink to="/signup" className="btn btn-primary" style={{ width: '100%' }} onClick={() => setIsOpen(false)}>
+                            <RouterLink to="/signup" className="btn btn-primary" style={{ width: '100%', borderRadius: '12px' }} onClick={() => setIsOpen(false)}>
                                 <span>Sign Up</span>
                             </RouterLink>
                         </div>
                     )}
                     {user && (
                         <div className="mobile-auth-actions">
-                            <button onClick={handleLogout} className="btn btn-secondary" style={{ width: '100%', borderRadius: '50px' }}>Sign Out</button>
+                            <button onClick={handleLogout} className="btn btn-secondary" style={{ width: '100%', borderRadius: '12px' }}>Sign Out</button>
                         </div>
                     )}
                 </div>
 
-                {/* Desktop & Toggle Actions */}
+                {/* Right Side Actions (Desktop) */}
                 <div className="nav-actions">
                     {user ? (
                         <div className="user-nav-actions">
                             {user.role === 'admin' && (
                                 <RouterLink to="/admin" className="nav-link admin-link">Admin</RouterLink>
                             )}
-                            <span className="user-greeting">Hi, {user.name?.split(' ')[0]}</span>
-                            <button onClick={handleLogout} className="btn-logout">Sign Out</button>
+                            <span className="user-greeting" style={{ marginLeft: '1rem' }}>Hi, {user.name?.split(' ')[0]}</span>
+                            <button onClick={handleLogout} className="btn btn-secondary" style={{ padding: '0.5rem 1.2rem', borderRadius: '50px', fontSize: '0.75rem', marginLeft: '0.5rem' }}>Sign Out</button>
                         </div>
                     ) : (
                         <div className="auth-nav-actions">
                             <RouterLink to="/login" className="nav-link signin-link">Sign In</RouterLink>
-                            <RouterLink to="/signup" className="btn btn-primary signup-btn">
+                            <RouterLink to="/signup" className="btn btn-primary signup-btn" style={{ marginLeft: '1rem' }}>
                                 <span>Sign Up</span>
                             </RouterLink>
                         </div>
