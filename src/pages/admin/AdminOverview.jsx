@@ -66,9 +66,9 @@ const AdminOverview = () => {
     const bookingChange = '+12.4%'; // Mocked growth for UI premium feel
 
     const stats = [
-        { label: 'Total Revenue', value: `$${totalRevenue.toLocaleString()}`, change: '+14.2%', positive: true, icon: <FiDollarSign />, path: '/admin/payments', description: 'Total gross revenue from all completed transactions.' },
+        { label: 'Total Revenue', value: `$${totalRevenue.toLocaleString()}`, change: '+14.2%', positive: true, color: '#2196f3', bgColor: 'rgba(33, 150, 243, 0.12)', icon: <FiDollarSign />, path: '/admin/payments', description: 'Total gross revenue from all completed transactions.' },
         { label: 'Website Traffic', value: (settings?.viewCount || 0).toLocaleString(), change: '+8.1%', positive: true, icon: <FiActivity />, path: '/admin/analytics', description: 'Total unique visits to the platform.' },
-        { label: 'Popular Package', value: popularService, change: 'Trending', positive: true, icon: <FiPackage />, path: '/admin/services', description: 'Most frequently booked service package.' },
+        { label: 'Popular Package', value: popularService, change: 'Trending', positive: true, color: '#4caf50', bgColor: 'rgba(76, 175, 80, 0.12)', icon: <FiPackage />, path: '/admin/services', description: 'Most frequently booked service package.' },
         { label: 'Membership', value: `${activeMembers} Active`, change: bookingChange, positive: true, icon: <FiUsers />, path: '/admin/subscriptions', description: 'Currently active recurring members.' }
     ];
 
@@ -139,7 +139,15 @@ const AdminOverview = () => {
                             <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-gold)', fontSize: '1.4rem' }}>
                                 {stat.icon}
                             </div>
-                            <div style={{ color: stat.positive ? '#4caf50' : '#ff4444', background: stat.positive ? 'rgba(76,175,80,0.1)' : 'rgba(255,68,68,0.1)', padding: '0.3rem 0.6rem', borderRadius: '50px', fontSize: '0.75rem', fontWeight: 'bold' }}>
+                            <div style={{
+                                color: stat.color || (stat.positive ? '#4caf50' : '#ff4444'),
+                                background: stat.bgColor || (stat.positive ? 'rgba(76,175,80,0.1)' : 'rgba(255,68,68,0.1)'),
+                                padding: '0.2rem 0.4rem',
+                                borderRadius: '4px',
+                                fontSize: '0.7rem',
+                                fontWeight: '700',
+                                height: 'fit-content'
+                            }}>
                                 {stat.change}
                             </div>
                         </div>
