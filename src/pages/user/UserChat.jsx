@@ -9,13 +9,16 @@ const UserChat = () => {
     const { conversations = [], messages = [], sendMessage, addConversation } = useData();
     const [newMessage, setNewMessage] = useState('');
     const messagesEndRef = useRef(null);
+    const scrollContainerRef = useRef(null);
 
     // Find our conversation or a virtual placeholder
     const myConvo = conversations.find(c => c.customer_id === user?.id || c.customerId === user?.id);
 
-    // Auto-scroll logic
+    // Auto-scroll logic (scrolls only the container, not the page)
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+        }
     }, [messages, myConvo]);
 
     const handleSend = async () => {
@@ -84,7 +87,10 @@ const UserChat = () => {
                 </div>
 
                 {/* Messages Body */}
-                <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <div
+                    ref={scrollContainerRef}
+                    style={{ flex: 1, overflowY: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}
+                >
                     {myMessages.length === 0 && (
                         <div style={{ textAlign: 'center', padding: '3rem 2rem', color: '#444' }}>
                             <FiMessageSquare size={48} style={{ marginBottom: '1.5rem', opacity: 0.1 }} />

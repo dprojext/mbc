@@ -12,6 +12,7 @@ const Booking = () => {
     const [vehicleChoice, setVehicleChoice] = useState('previous');
     const [modalOpen, setModalOpen] = useState(false);
     const [showMap, setShowMap] = useState(false);
+    const [isLocationConfirmed, setIsLocationConfirmed] = useState(false);
 
     // Find previous vehicles for this user
     const userPrevBookings = bookings.filter(b => b.customer_id === user?.id || b.email === user?.email);
@@ -57,8 +58,9 @@ const Booking = () => {
     };
 
     const handleMapConfirm = () => {
-        // Mocking a location selection
-        setFormData(prev => ({ ...prev, location: "📍 Bole Medhanialem, Protected Area" }));
+        const confirmedLocation = "Bole Medhanialem, Street 14 (Exact Pin)";
+        setFormData(prev => ({ ...prev, location: confirmedLocation }));
+        setIsLocationConfirmed(true);
         setShowMap(false);
     };
 
@@ -267,17 +269,24 @@ const Booking = () => {
                                 <div style={{ display: 'flex', gap: '0.8rem', marginBottom: showMap ? '1rem' : '0' }}>
                                     <div style={{ position: 'relative', flex: 1 }}>
                                         <input name="location" value={formData.location} onChange={handleChange} required placeholder="Search address..."
-                                            style={{ width: '100%', padding: '0.8rem 1rem 0.8rem 2.8rem', background: '#111', border: '1px solid #333', borderRadius: '10px', color: '#fff' }}
+                                            style={{
+                                                width: '100%', padding: '0.8rem 1rem 0.8rem 2.8rem', background: '#111',
+                                                border: isLocationConfirmed ? '1px solid var(--color-gold)' : '1px solid #333',
+                                                borderRadius: '10px', color: '#fff', transition: '0.3s'
+                                            }}
                                         />
-                                        <FiMapPin style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#555' }} />
+                                        <FiMapPin style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: isLocationConfirmed ? 'var(--color-gold)' : '#555' }} />
                                     </div>
                                     <button type="button" onClick={() => setShowMap(!showMap)}
                                         style={{
-                                            padding: '0 1rem', borderRadius: '10px', background: 'rgba(201,169,106,0.1)', border: '1px solid rgba(201,169,106,0.2)',
-                                            color: 'var(--color-gold)', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', transition: '0.3s'
+                                            padding: '0 1rem', borderRadius: '10px',
+                                            background: isLocationConfirmed ? 'var(--color-gold)' : 'rgba(201,169,106,0.1)',
+                                            border: '1px solid rgba(201,169,106,0.2)',
+                                            color: isLocationConfirmed ? '#000' : 'var(--color-gold)',
+                                            display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', transition: '0.3s'
                                         }}
                                     >
-                                        <FiMap /> <span style={{ fontSize: '0.8rem' }}>{showMap ? 'Close Map' : 'Map Select'}</span>
+                                        <FiMap /> <span style={{ fontSize: '0.8rem' }}>{showMap ? 'Close Map' : isLocationConfirmed ? 'Location Set' : 'Map Select'}</span>
                                     </button>
                                 </div>
 
