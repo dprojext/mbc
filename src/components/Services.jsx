@@ -43,6 +43,18 @@ const iconMap = {
 
 const Services = () => {
     const { services } = useData();
+    const scrollRef = React.useRef(null);
+    const [scrollProgress, setScrollProgress] = React.useState(0);
+
+    const handleScroll = () => {
+        if (scrollRef.current) {
+            const container = scrollRef.current;
+            const totalScroll = container.scrollWidth - container.clientWidth;
+            const currentScroll = container.scrollLeft;
+            const progress = (currentScroll / totalScroll) * 100;
+            setScrollProgress(progress);
+        }
+    };
 
     return (
         <section className="services" id="services">
@@ -56,7 +68,11 @@ const Services = () => {
                     </p>
                 </div>
 
-                <div className="services-grid">
+                <div
+                    className="services-grid"
+                    ref={scrollRef}
+                    onScroll={handleScroll}
+                >
                     {services.map((service, index) => (
                         <motion.div
                             key={service.id}
@@ -95,6 +111,19 @@ const Services = () => {
                             </div>
                         </motion.div>
                     ))}
+                </div>
+
+                {/* Scroll Pagination Dots - Mobile Only */}
+                <div className="mobile-scroll-dots">
+                    {services.map((_, i) => {
+                        const activeIndex = Math.round((scrollProgress / 100) * (services.length - 1));
+                        return (
+                            <div
+                                key={i}
+                                className={`scroll-dot ${i === activeIndex ? 'active' : ''}`}
+                            />
+                        );
+                    })}
                 </div>
             </div>
         </section>

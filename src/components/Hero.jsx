@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-scroll';
 import { useData } from '../context/DataContext';
+import { FiChevronRight, FiSearch } from 'react-icons/fi';
 
 const Hero = () => {
     const { settings } = useData();
@@ -57,8 +58,10 @@ const Hero = () => {
                     <Link to="booking" smooth={true} duration={500} className="btn btn-primary">
                         <span>Book Your Detail</span>
                         <div className="btn-shine"></div>
+                        <FiChevronRight className="btn-icon" />
                     </Link>
                     <Link to="services" smooth={true} duration={500} className="btn btn-secondary">
+                        <FiSearch className="btn-icon" />
                         <span>Explore Services</span>
                     </Link>
                 </motion.div>

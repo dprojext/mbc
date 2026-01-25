@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useData } from '../context/DataContext';
+import { FiCalendar, FiCheckCircle } from 'react-icons/fi';
 
 const Booking = () => {
     const { services, plans, addBooking } = useData();
@@ -245,7 +246,8 @@ const Booking = () => {
                                 ></textarea>
                             </div>
 
-                            <button type="submit" className="btn btn-primary form-submit">
+                            <button type="submit" className="btn btn-primary form-submit" style={{ width: '100%', marginTop: '1rem' }}>
+                                <FiCalendar className="btn-icon" />
                                 <span>Request Appointment</span>
                                 <div className="btn-shine"></div>
                             </button>

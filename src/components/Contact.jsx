@@ -138,7 +138,6 @@ const Contact = () => {
                                 <div className="service-area" style={{ pointerEvents: 'auto' }}>
                                     <h4>Service Area</h4>
                                     <p>We proudly serve <strong>{contact?.address || 'the entire metropolitan area'}</strong> and surrounding luxury communities.</p>
-                                    <a href="#booking" className="btn btn-secondary"><span>Check Availability</span></a>
                                 </div>
                             </div>
                         </div>

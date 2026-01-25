@@ -69,20 +69,38 @@ const Navbar = () => {
                     </div>
                 </RouterLink>
 
-                {/* Center Menu */}
+                {/* Content Menu & Mobile Actions */}
                 <div className={`nav-menu-wrapper ${isOpen ? 'active' : ''}`}>
                     <ul className="nav-menu">
-                        {!user && navLinks}
+                        {navLinks}
                         {user && (
                             <>
                                 <li><RouterLink to="/dashboard" className="nav-link" onClick={() => setIsOpen(false)}>My Garage</RouterLink></li>
                                 <li><RouterLink to="/booking" className="nav-link" onClick={() => setIsOpen(false)}>Book Service</RouterLink></li>
+                                {user.role === 'admin' && (
+                                    <li><RouterLink to="/admin" className="nav-link admin-link" onClick={() => setIsOpen(false)}>Admin Panel</RouterLink></li>
+                                )}
                             </>
                         )}
                     </ul>
+
+                    {/* Mobile Only: Auth Actions */}
+                    {!user && (
+                        <div className="mobile-auth-actions">
+                            <RouterLink to="/login" className="nav-link" onClick={() => setIsOpen(false)}>Sign In</RouterLink>
+                            <RouterLink to="/signup" className="btn btn-primary" style={{ width: '100%' }} onClick={() => setIsOpen(false)}>
+                                <span>Sign Up</span>
+                            </RouterLink>
+                        </div>
+                    )}
+                    {user && (
+                        <div className="mobile-auth-actions">
+                            <button onClick={handleLogout} className="btn btn-secondary" style={{ width: '100%', borderRadius: '50px' }}>Sign Out</button>
+                        </div>
+                    )}
                 </div>
 
-                {/* Right Side Actions */}
+                {/* Desktop & Toggle Actions */}
                 <div className="nav-actions">
                     {user ? (
                         <div className="user-nav-actions">

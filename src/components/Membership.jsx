@@ -1,11 +1,25 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useData } from '../context/DataContext';
+import { FiStar, FiCheckCircle } from 'react-icons/fi';
 
 const Membership = () => {
     const { plans, settings } = useData();
     const [currency, setCurrency] = useState('USD');
     const exchangeRate = 56.5;
+
+    const scrollRef = React.useRef(null);
+    const [scrollProgress, setScrollProgress] = React.useState(0);
+
+    const handleScroll = () => {
+        if (scrollRef.current) {
+            const container = scrollRef.current;
+            const totalScroll = container.scrollWidth - container.clientWidth;
+            const currentScroll = container.scrollLeft;
+            const progress = (currentScroll / totalScroll) * 100;
+            setScrollProgress(progress);
+        }
+    };
 
     const formatPrice = (price, planCurrency) => {
         if (currency === planCurrency) return price;
@@ -83,7 +97,11 @@ const Membership = () => {
                     ))}
                 </div>
 
-                <div className="plans-grid">
+                <div
+                    className="plans-grid"
+                    ref={scrollRef}
+                    onScroll={handleScroll}
+                >
                     {allPlans.map((plan, index) => (
                         <motion.div
                             key={plan.id}
@@ -121,12 +139,26 @@ const Membership = () => {
                                     href="#booking"
                                     className={index === featuredIndex ? "btn btn-primary plan-btn" : "btn btn-secondary plan-btn"}
                                 >
+                                    {index === featuredIndex ? <FiStar className="btn-icon" /> : <FiCheckCircle className="btn-icon" />}
                                     <span>{plan.type === 'subscription' ? 'Select Plan' : 'Book Now'}</span>
                                     {index === featuredIndex && <div className="btn-shine"></div>}
                                 </a>
                             </div>
                         </motion.div>
                     ))}
+                </div>
+
+                {/* Scroll Pagination Dots - Mobile Only */}
+                <div className="mobile-scroll-dots">
+                    {allPlans.map((_, i) => {
+                        const activeIndex = Math.round((scrollProgress / 100) * (allPlans.length - 1));
+                        return (
+                            <div
+                                key={i}
+                                className={`scroll-dot ${i === activeIndex ? 'active' : ''}`}
+                            />
+                        );
+                    })}
                 </div>
             </div>
         </section >

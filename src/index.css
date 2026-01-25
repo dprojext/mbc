@@ -60,6 +60,8 @@
 html {
     scroll-behavior: smooth;
     font-size: 16px;
+    width: 100%;
+    overflow-x: clip;
 }
 
 body {
@@ -67,8 +69,12 @@ body {
     background-color: var(--color-black);
     color: var(--color-platinum);
     line-height: 1.6;
-    overflow-x: hidden;
+    width: 100%;
+    overflow-x: clip;
     -webkit-font-smoothing: antialiased;
+    position: relative;
+    -webkit-text-size-adjust: 100%;
+    /* Prevent automatic font resizing */
 }
 
 /* Custom Scrollbar - Dark/Gold Theme */
@@ -131,6 +137,8 @@ h6 {
     font-weight: 400;
     line-height: 1.2;
     letter-spacing: 0.02em;
+    overflow-wrap: break-word;
+    word-break: break-word;
 }
 
 .gold {
@@ -246,10 +254,16 @@ h6 {
 .nav-container {
     max-width: 1400px;
     margin: 0 auto;
-    padding: 0 var(--space-lg);
+    padding: 0 1rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
+}
+
+@media (min-width: 768px) {
+    .nav-container {
+        padding: 0 var(--space-lg);
+    }
 }
 
 .nav-logo {
@@ -259,8 +273,14 @@ h6 {
 }
 
 .logo-img {
-    height: 40px;
+    height: 32px;
     width: auto;
+}
+
+@media (min-width: 768px) {
+    .logo-img {
+        height: 40px;
+    }
 }
 
 .logo-text {
@@ -270,13 +290,19 @@ h6 {
 
 .logo-main {
     font-family: var(--font-heading);
-    font-size: 1.5rem;
+    font-size: 1.1rem;
     font-weight: 600;
     background: var(--gradient-gold);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
     letter-spacing: 0.1em;
+}
+
+@media (min-width: 768px) {
+    .logo-main {
+        font-size: 1.5rem;
+    }
 }
 
 .logo-sub {
@@ -289,6 +315,17 @@ h6 {
 .nav-menu {
     display: flex;
     gap: var(--space-xl);
+}
+
+.nav-menu-wrapper {
+    display: flex;
+    align-items: center;
+}
+
+.nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .nav-link {
@@ -368,56 +405,77 @@ h6 {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: var(--space-xs);
-    padding: var(--space-md) var(--space-xl);
+    gap: var(--space-sm);
+    padding: var(--space-md) var(--space-2xl);
     font-family: var(--font-body);
-    font-size: 0.8rem;
-    font-weight: 500;
-    letter-spacing: 0.15em;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
     border: none;
     cursor: pointer;
-    transition: var(--transition-base);
+    transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
     position: relative;
     overflow: hidden;
-    border-radius: 50px;
-    /* Rounded */
+    border-radius: 12px;
+    text-decoration: none;
 }
 
 .btn-primary {
-    background: var(--color-gold);
-    color: var(--color-btn-text, #000);
+    background: linear-gradient(135deg, var(--color-gold) 0%, var(--color-gold-dark) 100%);
+    color: #000;
+    box-shadow: 0 4px 20px rgba(var(--color-gold-rgb), 0.2);
 }
 
 .btn-primary:hover {
-    background: var(--color-gold-light);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-gold);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 30px rgba(var(--color-gold-rgb), 0.4);
+    background: linear-gradient(135deg, var(--color-gold-light) 0%, var(--color-gold) 100%);
 }
 
 .btn-shine {
     position: absolute;
     top: 0;
     left: -100%;
-    width: 100%;
+    width: 60%;
     height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-    transition: 0.5s;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    transform: skewX(-25deg);
+    transition: 0.7s;
 }
 
 .btn:hover .btn-shine {
-    left: 100%;
+    left: 140%;
 }
 
 .btn-secondary {
-    background: transparent;
-    border: 1px solid var(--color-grey);
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     color: var(--color-platinum);
 }
 
 .btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.07);
     border-color: var(--color-gold);
     color: var(--color-gold);
+    transform: translateY(-3px);
+}
+
+.btn-icon {
+    font-size: 1.1rem;
+    transition: transform 0.3s ease;
+}
+
+.btn:hover .btn-icon {
+    transform: translateX(3px);
+}
+
+@media (max-width: 480px) {
+    .btn {
+        width: 100%;
+        padding: var(--space-md) var(--space-xl);
+    }
 }
 
 /* ============================================
@@ -1009,14 +1067,29 @@ h6 {
     align-items: center;
     gap: var(--space-xs);
     font-size: 0.75rem;
-    font-weight: 500;
+    font-weight: 700;
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--color-gold);
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+@media (max-width: 768px) {
+    .service-link {
+        width: 100%;
+        justify-content: center;
+        padding: 1rem;
+        background: rgba(201, 169, 106, 0.05);
+        border: 1px solid rgba(201, 169, 106, 0.15);
+        border-radius: 10px;
+        margin-top: 1rem;
+    }
 }
 
 .service-link:hover {
     color: var(--color-gold-light);
+    transform: translateX(3px);
 }
 
 .service-link svg {
@@ -1025,6 +1098,11 @@ h6 {
 
 .service-link:hover svg {
     transform: translateX(5px);
+}
+
+.signup-btn {
+    padding: 0.6rem 1.2rem !important;
+    font-size: 0.75rem !important;
 }
 
 /* ============================================
@@ -1331,9 +1409,16 @@ h6 {
 
 .booking-grid {
     display: grid;
-    grid-template-columns: 1fr 1.2fr;
-    gap: var(--space-2xl);
+    grid-template-columns: 1fr;
+    gap: 3rem;
     align-items: start;
+}
+
+@media (min-width: 992px) {
+    .booking-grid {
+        grid-template-columns: 1fr 1.2fr;
+        gap: var(--space-2xl);
+    }
 }
 
 .booking-benefits {
@@ -1399,8 +1484,14 @@ h6 {
 
 .form-row {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
     gap: var(--space-md);
+}
+
+@media (min-width: 650px) {
+    .form-row {
+        grid-template-columns: 1fr 1fr;
+    }
 }
 
 .form-group label {
@@ -1689,6 +1780,19 @@ a.method-value:hover {
     margin-bottom: var(--space-md);
 }
 
+.footer-socials {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    justify-content: center;
+}
+
+@media (min-width: 992px) {
+    .footer-socials {
+        justify-content: flex-start;
+    }
+}
+
 .social-icon-btn {
     width: 36px;
     height: 36px;
@@ -1891,6 +1995,9 @@ a.method-value:hover {
 /* ============================================
    RESPONSIVE DESIGN
    ============================================ */
+/* ============================================
+   RESPONSIVE OVERRIDES
+   ============================================ */
 @media (max-width: 1200px) {
     .services-grid {
         grid-template-columns: repeat(2, 1fr);
@@ -1925,71 +2032,10 @@ a.method-value:hover {
         display: none;
     }
 
-    .nav-menu {
-        position: fixed;
-        top: 0;
-        right: -100%;
-        width: 280px;
-        height: 100vh;
-        background: var(--color-graphite);
-        flex-direction: column;
-        padding: var(--space-3xl) var(--space-lg);
-        gap: var(--space-lg);
-        transition: var(--transition-base);
-        border-left: 1px solid var(--color-charcoal);
-    }
-
-    .nav-menu.active {
-        right: 0;
-    }
-
-    .nav-cta {
-        display: none;
-    }
-
-    .nav-toggle {
-        display: flex;
-    }
-
-    .nav-toggle.active span:nth-child(1) {
-        transform: rotate(45deg) translate(5px, 5px);
-    }
-
-    .nav-toggle.active span:nth-child(2) {
-        opacity: 0;
-    }
-
-    .nav-toggle.active span:nth-child(3) {
-        transform: rotate(-45deg) translate(5px, -5px);
-    }
-
     .why-us-grid,
     .booking-grid,
     .contact-grid {
         grid-template-columns: 1fr;
-    }
-
-    .plans-grid {
-        grid-template-columns: 1fr;
-        max-width: 400px;
-        margin: 0 auto;
-    }
-
-    .plan-card.featured {
-        transform: none;
-    }
-
-    .plan-card.featured:hover {
-        transform: translateY(-8px);
-    }
-}
-
-/* ============================================
-   RESPONSIVE OVERRIDES
-   ============================================ */
-@media (max-width: 1200px) {
-    .services-grid {
-        grid-template-columns: repeat(2, 1fr);
     }
 }
 
@@ -1999,16 +2045,21 @@ a.method-value:hover {
         top: 0;
         right: -100%;
         width: 100%;
-        max-width: 300px;
+        max-width: 100%;
+        /* Full screen */
         height: 100vh;
         background: rgba(10, 10, 10, 0.98);
-        backdrop-filter: blur(20px);
+        backdrop-filter: blur(30px);
         z-index: 2000;
         transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        padding: 8rem 2.5rem;
+        padding: 4rem 2rem;
         display: flex;
         flex-direction: column;
-        border-left: 1px solid rgba(255, 255, 255, 0.1);
+        align-items: center;
+        /* Horizontally center */
+        justify-content: center;
+        /* Vertically center */
+        text-align: center;
     }
 
     .nav-menu-wrapper.active {
@@ -2017,16 +2068,55 @@ a.method-value:hover {
 
     .nav-menu {
         flex-direction: column;
-        gap: 2rem;
+        align-items: center;
+        justify-content: center;
+        gap: 2.5rem;
+        width: 100%;
+        padding: 0;
+        margin: 0;
+        list-style: none;
+    }
+
+    .nav-menu .nav-link {
+        font-size: 1.5rem;
+        /* Larger links for full screen */
+        font-weight: 500;
+        letter-spacing: 0.15em;
     }
 
     .nav-toggle {
         display: flex;
         z-index: 2100;
+        position: relative;
     }
 
     .nav-actions {
-        margin-right: 3rem;
+        margin-right: 0;
+    }
+
+    .auth-nav-actions,
+    .user-nav-actions {
+        display: none !important;
+    }
+
+    /* Move Actions Inside Burger */
+    .mobile-auth-actions {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1.5rem;
+        margin-top: 4rem;
+        /* Spacing from links */
+        padding-top: 3rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        width: 80%;
+        /* Centered container width */
+        max-width: 300px;
+    }
+
+    .mobile-auth-actions .nav-link {
+        font-size: 1.1rem;
+        color: #fff;
     }
 }
 
@@ -2036,7 +2126,57 @@ a.method-value:hover {
     }
 
     .services-grid {
-        grid-template-columns: 1fr;
+        display: flex;
+        flex-wrap: nowrap !important;
+        /* Force single row */
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        scroll-behavior: smooth;
+        padding: 1rem 0 2rem;
+        gap: 1.5rem;
+        margin-right: -1.2rem;
+        /* Bleed to edge */
+        margin-left: -1.2rem;
+        padding-left: 1.2rem;
+        padding-right: 1.2rem;
+    }
+
+    .services-grid::-webkit-scrollbar {
+        display: none;
+    }
+
+    .service-card {
+        min-width: 280px;
+        flex: 0 0 auto !important;
+        /* Prevent shrinking/growing */
+        scroll-snap-align: center;
+    }
+
+    .plans-grid {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        /* Force single row */
+        overflow-x: auto !important;
+        scroll-snap-type: x mandatory;
+        scroll-behavior: smooth;
+        padding: 1rem 0 2rem;
+        gap: 1.5rem;
+        margin-right: -1.2rem;
+        margin-left: -1.2rem;
+        padding-left: 1.2rem;
+        padding-right: 1.2rem;
+        max-width: none !important;
+    }
+
+    .plans-grid::-webkit-scrollbar {
+        display: none;
+    }
+
+    .plan-card {
+        min-width: 300px;
+        flex: 0 0 auto !important;
+        /* Prevent shrinking/growing */
+        scroll-snap-align: center;
     }
 
     .form-row {
@@ -2069,6 +2209,35 @@ a.method-value:hover {
 
     .history-item {
         padding: 1.2rem;
+    }
+}
+
+/* Scroll Pagination Dots */
+.mobile-scroll-dots {
+    display: none;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin-top: 2rem;
+}
+
+.scroll-dot {
+    width: 6px;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 50%;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.scroll-dot.active {
+    background: var(--color-gold);
+    transform: scale(1.5);
+    box-shadow: 0 0 12px rgba(var(--color-gold-rgb), 0.5);
+}
+
+@media (max-width: 768px) {
+    .mobile-scroll-dots {
+        display: flex;
     }
 }
 
