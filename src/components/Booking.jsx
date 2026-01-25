@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
-import { FiCalendar, FiCheckCircle, FiUser, FiUsers, FiTruck, FiMapPin, FiClock, FiMessageSquare, FiArrowRight, FiChevronDown, FiMap } from 'react-icons/fi';
+import { FiCalendar, FiCheckCircle, FiUser, FiUsers, FiTruck, FiMapPin, FiClock, FiMessageSquare, FiArrowRight, FiChevronDown, FiMap, FiShield, FiZap } from 'react-icons/fi';
 
 const Booking = () => {
     const { services, plans, addBooking, bookings = [] } = useData();
@@ -11,6 +11,7 @@ const Booking = () => {
     const [bookingFor, setBookingFor] = useState('myself');
     const [vehicleChoice, setVehicleChoice] = useState('previous');
     const [modalOpen, setModalOpen] = useState(false);
+    const [showMap, setShowMap] = useState(false);
 
     // Find previous vehicles for this user
     const userPrevBookings = bookings.filter(b => b.customer_id === user?.id || b.email === user?.email);
@@ -28,7 +29,6 @@ const Booking = () => {
         notes: ''
     });
 
-    // Determine if we should show contact fields
     const showContactFields = bookingFor === 'other' || (!user?.name || !user?.phone);
 
     useEffect(() => {
@@ -56,6 +56,12 @@ const Booking = () => {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
+    const handleMapConfirm = () => {
+        // Mocking a location selection
+        setFormData(prev => ({ ...prev, location: "📍 Bole Medhanialem, Protected Area" }));
+        setShowMap(false);
+    };
+
     const handleSubmit = (e) => {
         e.preventDefault();
         addBooking({
@@ -81,13 +87,11 @@ const Booking = () => {
     }
 
     const benefits = [
+        { icon: <FiShield />, title: 'Professional Insurance', desc: 'Full multi-point liability coverage.' },
         { icon: <FiTruck />, title: 'Executive Mobile Service', desc: 'We come to your home or office.' },
         { icon: <FiClock />, title: 'Strict Punctuality', desc: 'On-time arrival, guaranteed.' },
-        { icon: <FiCheckCircle />, title: 'Ceramic Coating Specialists', desc: 'Certified application experts available.' },
-        { icon: <FiTruck />, title: 'Eco-Friendly Tech', desc: 'Waterless systems for sustainable care.' },
-        { icon: <FiMapPin />, title: 'Real-time GPS Tracking', desc: 'Monitor our team\'s arrival to your pin.' },
-        { icon: <FiUser />, title: 'Professional Insurance', desc: 'Full multi-point liability coverage.' },
-        { icon: <FiMessageSquare />, title: 'Key Concierge', desc: 'Secure pickup and drop-off service.' }
+        { icon: <FiCheckCircle />, title: 'Certified Detailing Experts', desc: 'Masters in automotive surface restoration.' },
+        { icon: <FiZap />, title: '24/7 Digital Concierge', desc: 'Manage your garage from anywhere, anytime.' }
     ];
 
     return (
@@ -129,7 +133,8 @@ const Booking = () => {
                         viewport={{ once: true }}
                         style={{
                             background: 'rgba(20,20,20,0.8)', padding: '3rem', borderRadius: '24px',
-                            border: '1px solid rgba(255,255,255,0.05)', boxShadow: '0 20px 40px rgba(0,0,0,0.4)'
+                            border: '1px solid rgba(255,255,255,0.05)', boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
+                            position: 'relative'
                         }}
                     >
                         <form onSubmit={handleSubmit}>
@@ -162,7 +167,6 @@ const Booking = () => {
                                 </div>
                             </div>
 
-                            {/* Show Name/Phone only for Other or if profile is missing details */}
                             {showContactFields && (
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
                                     <div className="form-input-group">
@@ -186,7 +190,6 @@ const Booking = () => {
                                 </div>
                             )}
 
-                            {/* Vehicle Header */}
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                                 <label style={{ color: '#888', fontSize: '0.75rem', display: 'block' }}>Vehicle Information</label>
                                 {bookingFor === 'myself' && prevVehicles.length > 0 && (
@@ -197,7 +200,6 @@ const Booking = () => {
                                 )}
                             </div>
 
-                            {/* Vehicle Input */}
                             <div style={{ marginBottom: '1.5rem' }}>
                                 {bookingFor === 'myself' && vehicleChoice === 'previous' && prevVehicles.length > 0 ? (
                                     <div style={{ position: 'relative' }}>
@@ -220,7 +222,6 @@ const Booking = () => {
                                 )}
                             </div>
 
-                            {/* Service Type */}
                             <div style={{ marginBottom: '1.5rem' }}>
                                 <label style={{ color: '#888', fontSize: '0.75rem', marginBottom: '0.5rem', display: 'block' }}>Service Type</label>
                                 <div style={{ position: 'relative' }}>
@@ -263,22 +264,61 @@ const Booking = () => {
 
                             <div style={{ marginBottom: '1.5rem' }}>
                                 <label style={{ color: '#888', fontSize: '0.75rem', marginBottom: '0.5rem', display: 'block' }}>Service Location</label>
-                                <div style={{ display: 'flex', gap: '0.8rem' }}>
+                                <div style={{ display: 'flex', gap: '0.8rem', marginBottom: showMap ? '1rem' : '0' }}>
                                     <div style={{ position: 'relative', flex: 1 }}>
                                         <input name="location" value={formData.location} onChange={handleChange} required placeholder="Search address..."
                                             style={{ width: '100%', padding: '0.8rem 1rem 0.8rem 2.8rem', background: '#111', border: '1px solid #333', borderRadius: '10px', color: '#fff' }}
                                         />
                                         <FiMapPin style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#555' }} />
                                     </div>
-                                    <button type="button" onClick={() => setFormData(prev => ({ ...prev, location: "Current Location Captured" }))}
+                                    <button type="button" onClick={() => setShowMap(!showMap)}
                                         style={{
                                             padding: '0 1rem', borderRadius: '10px', background: 'rgba(201,169,106,0.1)', border: '1px solid rgba(201,169,106,0.2)',
-                                            color: 'var(--color-gold)', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer'
+                                            color: 'var(--color-gold)', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', transition: '0.3s'
                                         }}
                                     >
-                                        <FiMap /> <span style={{ fontSize: '0.8rem' }}>Map Select</span>
+                                        <FiMap /> <span style={{ fontSize: '0.8rem' }}>{showMap ? 'Close Map' : 'Map Select'}</span>
                                     </button>
                                 </div>
+
+                                <AnimatePresence>
+                                    {showMap && (
+                                        <motion.div
+                                            initial={{ opacity: 0, height: 0 }}
+                                            animate={{ opacity: 1, height: '300px' }}
+                                            exit={{ opacity: 0, height: 0 }}
+                                            style={{
+                                                width: '100%', background: '#0a0a0a', border: '1px solid #333',
+                                                borderRadius: '12px', overflow: 'hidden', position: 'relative'
+                                            }}
+                                        >
+                                            <iframe
+                                                title="location-picker"
+                                                width="100%"
+                                                height="100%"
+                                                frameBorder="0"
+                                                style={{ border: 0, filter: 'invert(90%) hue-rotate(180deg) contrast(90%)' }}
+                                                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15762.684205561937!2d38.7758334!3d8.9813889!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x164b85cef5ab402d%3A0x846716a10ead4b1d!2sBole%2C%20Addis%20Ababa!5e0!3m2!1sen!2set!4v1700000000000!5m2!1sen!2set"
+                                                allowFullScreen
+                                            ></iframe>
+                                            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'none' }}>
+                                                <FiMapPin size={32} color="var(--color-gold)" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }} />
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={handleMapConfirm}
+                                                style={{
+                                                    position: 'absolute', bottom: '1rem', left: '50%', transform: 'translateX(-50%)',
+                                                    padding: '0.6rem 1.2rem', background: 'var(--color-gold)', color: '#000',
+                                                    border: 'none', borderRadius: '50px', fontWeight: 'bold', cursor: 'pointer',
+                                                    boxShadow: '0 4px 15px rgba(0,0,0,0.3)'
+                                                }}
+                                            >
+                                                Confirm Location
+                                            </button>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </div>
 
                             <div style={{ marginBottom: '2rem' }}>
@@ -299,7 +339,6 @@ const Booking = () => {
                     </motion.div>
                 </div>
             </div>
-            {/* Modal remains same */}
 
             {/* Success Modal */}
             <AnimatePresence>
