@@ -1,59 +1,59 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import UserOverview from './user/UserOverview';
+import UserServices from './user/UserServices';
+import UserSubscription from './user/UserSubscription';
+import UserBookings from './user/UserBookings';
+import UserChat from './user/UserChat';
+import UserNotificationCenter from './user/UserNotificationCenter';
 import { useAuth } from '../context/AuthContext';
-import { Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const UserDashboard = () => {
     const { user } = useAuth();
-
-    // Mock user history
-    const history = user?.requests || [
-        { id: 1, service: 'Signature Hand Wash', date: '2023-10-15', status: 'Completed', notes: 'Great job!' },
-        { id: 2, service: 'Interior Detail', date: '2023-11-20', status: 'Completed', notes: '' }
-    ];
+    const location = useLocation();
 
     return (
-        <div style={{ background: 'var(--color-black)', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ background: '#050505', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
             <Navbar />
-            <div className="garage-container">
-                <div className="garage-header">
-                    <h1 className="garage-title">My Garage</h1>
-                    <Link to="/booking" className="btn btn-primary">
-                        <span>New Appointment</span>
-                        <div className="btn-shine"></div>
-                    </Link>
-                </div>
 
-                <div className="garage-card">
-                    <h2 className="garage-card-title">Recent Activity</h2>
-
-                    {history.length > 0 ? (
-                        <div className="history-list">
-                            {history.map(item => (
-                                <div key={item.id} className="history-item">
-                                    <div className="history-info">
-                                        <div className="history-service">{item.service}</div>
-                                        <div className="history-id">ID: #{item.id}</div>
-                                    </div>
-                                    <div className="history-date">{item.date}</div>
-                                    <div className="history-status">
-                                        <span className={`status-badge ${item.status.toLowerCase()}`}>
-                                            {item.status}
-                                        </span>
-                                    </div>
-                                    <div className="history-actions">
-                                        <button className="btn btn-secondary">Details</button>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <p className="empty-message">No service history found.</p>
-                    )}
+            <main style={{ flex: 1, padding: '8rem 0 4rem' }}>
+                <div className="section-container" style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 2rem' }}>
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={location.pathname}
+                            initial={{ opacity: 0, x: 10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -10 }}
+                            transition={{ duration: 0.3 }}
+                        >
+                            <Routes>
+                                <Route index element={<UserOverview />} />
+                                <Route path="services" element={<UserServices />} />
+                                <Route path="subscription" element={<UserSubscription />} />
+                                <Route path="bookings" element={<UserBookings />} />
+                                <Route path="chat" element={<UserChat />} />
+                                <Route path="notifications" element={<UserNotificationCenter />} />
+                            </Routes>
+                        </motion.div>
+                    </AnimatePresence>
                 </div>
-            </div>
+            </main>
+
             <Footer />
+
+            <style>{`
+                .user-overview, .user-services, .user-subscription, .user-bookings, .user-chat-container, .user-notifications {
+                    animation: fadeIn 0.4s ease-out;
+                }
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                .gold { color: var(--color-gold); }
+            `}</style>
         </div>
     );
 };

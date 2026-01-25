@@ -1,0 +1,189 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { useAuth } from '../../context/AuthContext';
+import { useData } from '../../context/DataContext';
+import { FiSend, FiMessageSquare, FiCheckCircle, FiClock, FiUser, FiInfo } from 'react-icons/fi';
+import { motion } from 'framer-motion';
+
+const UserChat = () => {
+    const { user } = useAuth();
+    const { conversations = [], messages = [], sendMessage, addConversation } = useData();
+    const [newMessage, setNewMessage] = useState('');
+    const messagesEndRef = useRef(null);
+
+    // Find our conversation or a virtual placeholder
+    const myConvo = conversations.find(c => c.customer_id === user?.id || c.customerId === user?.id);
+
+    // Auto-scroll logic
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages, myConvo]);
+
+    const handleSend = async () => {
+        if (!newMessage.trim()) return;
+
+        let convoId = myConvo?.id;
+
+        // If no conversation exists yet, create one
+        if (!convoId) {
+            const newConvo = await addConversation({
+                customerName: user.name,
+                customerId: user.id,
+                lastMessage: newMessage.trim(),
+                lastMessageTime: new Date().toISOString()
+            });
+            if (newConvo) convoId = newConvo.id;
+        }
+
+        if (convoId) {
+            await sendMessage({
+                conversationId: convoId,
+                sender: 'user',
+                text: newMessage.trim(),
+                timestamp: new Date().toISOString()
+            });
+            setNewMessage('');
+        }
+    };
+
+    const handleKeyPress = (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSend();
+        }
+    };
+
+    const myMessages = myConvo ? messages.filter(m => m.conversationId === myConvo.id) : [];
+
+    const formatTime = (ts) => {
+        if (!ts) return '';
+        return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    };
+
+    return (
+        <div className="user-chat-container" style={{ height: 'calc(100vh - 12rem)', display: 'flex', flexDirection: 'column' }}>
+            <header className="admin-flex-between" style={{ marginBottom: '2rem' }}>
+                <div>
+                    <h1 style={{ color: '#fff', fontSize: '2rem', margin: 0 }}>Support <span className="gold">Chat</span></h1>
+                    <p style={{ color: '#888', marginTop: '0.4rem' }}>Chat directly with our executive care team.</p>
+                </div>
+            </header>
+
+            <div className="admin-card" style={{ flex: 1, padding: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                {/* Chat Header Info */}
+                <div style={{ padding: '1.2rem 1.5rem', background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid #1a1a1a', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--color-gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000' }}>
+                        <FiUser />
+                    </div>
+                    <div>
+                        <div style={{ color: '#fff', fontWeight: 'bold' }}>MBC Admin Support</div>
+                        <div style={{ color: '#4caf50', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4caf50' }}></span>
+                            Typically replies in minutes
+                        </div>
+                    </div>
+                </div>
+
+                {/* Messages Body */}
+                <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                    {myMessages.length === 0 && (
+                        <div style={{ textAlign: 'center', padding: '3rem 2rem', color: '#444' }}>
+                            <FiMessageSquare size={48} style={{ marginBottom: '1.5rem', opacity: 0.1 }} />
+                            <h3>No messages yet</h3>
+                            <p>Send a message below to start chatting with us.</p>
+                        </div>
+                    )}
+
+                    {myMessages.map((msg, idx) => {
+                        const isMe = msg.sender === 'user';
+                        return (
+                            <motion.div
+                                key={idx}
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                style={{
+                                    alignSelf: isMe ? 'flex-end' : 'flex-start',
+                                    maxWidth: '80%',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: isMe ? 'flex-end' : 'flex-start'
+                                }}
+                            >
+                                <div style={{
+                                    padding: '1rem 1.25rem',
+                                    borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+                                    background: isMe ? 'var(--color-gold)' : '#222',
+                                    color: isMe ? '#000' : '#fff',
+                                    fontSize: '0.95rem',
+                                    lineHeight: '1.5',
+                                    boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
+                                }}>
+                                    {msg.text}
+                                </div>
+                                <div style={{
+                                    marginTop: '0.5rem',
+                                    fontSize: '0.7rem',
+                                    color: '#555',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.3rem'
+                                }}>
+                                    {formatTime(msg.timestamp)}
+                                    {isMe && <FiCheckCircle size={10} />}
+                                </div>
+                            </motion.div>
+                        );
+                    })}
+                    <div ref={messagesEndRef} />
+                </div>
+
+                {/* Input Area */}
+                <div style={{ padding: '1.5rem', background: 'rgba(0,0,0,0.2)', borderTop: '1px solid #1a1a1a' }}>
+                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end' }}>
+                        <textarea
+                            value={newMessage}
+                            onChange={(e) => setNewMessage(e.target.value)}
+                            onKeyPress={handleKeyPress}
+                            placeholder="Describe your issue or request..."
+                            style={{
+                                flex: 1,
+                                padding: '1rem',
+                                background: '#0a0a0a',
+                                border: '1px solid #333',
+                                borderRadius: '12px',
+                                color: '#fff',
+                                resize: 'none',
+                                fontSize: '0.9rem',
+                                outline: 'none',
+                                minHeight: '50px',
+                                maxHeight: '150px'
+                            }}
+                            rows={1}
+                        />
+                        <button
+                            onClick={handleSend}
+                            disabled={!newMessage.trim()}
+                            style={{
+                                width: '50px',
+                                height: '50px',
+                                borderRadius: '12px',
+                                background: newMessage.trim() ? 'var(--color-gold)' : '#222',
+                                color: newMessage.trim() ? '#000' : '#444',
+                                border: 'none',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '1.2rem',
+                                cursor: newMessage.trim() ? 'pointer' : 'not-allowed',
+                                transition: '0.3s'
+                            }}
+                        >
+                            <FiSend />
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default UserChat;

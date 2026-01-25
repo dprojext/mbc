@@ -3,6 +3,7 @@ import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import { Link } from 'react-scroll';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
+import { FiBell, FiMessageSquare, FiUser, FiCalendar, FiCreditCard, FiZap } from 'react-icons/fi';
 
 const Navbar = () => {
     const [scrolled, setScrolled] = useState(false);
@@ -10,8 +11,10 @@ const Navbar = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const { user, logout } = useAuth();
-    const { settings } = useData();
+    const { settings, userNotifications = [] } = useData();
     const isHomePage = location.pathname === '/';
+
+    const unreadNotifications = userNotifications.filter(n => !n.read && n.user_id === user?.id).length;
 
     useEffect(() => {
         const handleScroll = () => {
@@ -26,32 +29,6 @@ const Navbar = () => {
         navigate('/');
         setIsOpen(false);
     };
-
-    const navLinks = (
-        <>
-            <li>
-                {isHomePage ? (
-                    <Link to="hero" smooth={true} duration={500} className="nav-link" onClick={() => setIsOpen(false)}>Home</Link>
-                ) : (
-                    <RouterLink to="/" className="nav-link" onClick={() => setIsOpen(false)}>Home</RouterLink>
-                )}
-            </li>
-            <li>
-                {isHomePage ? (
-                    <Link to="services" smooth={true} duration={500} className="nav-link" onClick={() => setIsOpen(false)}>Services</Link>
-                ) : (
-                    <RouterLink to="/#services" className="nav-link" onClick={() => setIsOpen(false)}>Services</RouterLink>
-                )}
-            </li>
-            <li>
-                {isHomePage ? (
-                    <Link to="subscriptions" smooth={true} duration={500} className="nav-link" onClick={() => setIsOpen(false)}>Membership</Link>
-                ) : (
-                    <RouterLink to="/#subscriptions" className="nav-link" onClick={() => setIsOpen(false)}>Membership</RouterLink>
-                )}
-            </li>
-        </>
-    );
 
     return (
         <nav className={`navbar ${scrolled ? 'scrolled' : ''}`}>
@@ -100,11 +77,11 @@ const Navbar = () => {
                             </>
                         ) : (
                             <>
-                                <li><RouterLink to="/dashboard" className="nav-link" onClick={() => setIsOpen(false)}>My Garage</RouterLink></li>
-                                <li><RouterLink to="/booking" className="nav-link" onClick={() => setIsOpen(false)}>Book Service</RouterLink></li>
-                                {user.role === 'admin' && (
-                                    <li><RouterLink to="/admin" className="nav-link admin-link" onClick={() => setIsOpen(false)}>Admin Panel</RouterLink></li>
-                                )}
+                                <li><RouterLink to="/dashboard" className="nav-link" onClick={() => setIsOpen(false)}>Dashboard</RouterLink></li>
+                                <li><RouterLink to="/dashboard/services" className="nav-link" onClick={() => setIsOpen(false)}>Services</RouterLink></li>
+                                <li><RouterLink to="/dashboard/subscription" className="nav-link" onClick={() => setIsOpen(false)}>Subscription</RouterLink></li>
+                                <li><RouterLink to="/dashboard/bookings" className="nav-link" onClick={() => setIsOpen(false)}>Previous Books</RouterLink></li>
+                                <li><RouterLink to="/dashboard/chat" className="nav-link" onClick={() => setIsOpen(false)}>Chat</RouterLink></li>
                             </>
                         )}
                     </ul>
@@ -120,6 +97,7 @@ const Navbar = () => {
                     )}
                     {user && (
                         <div className="mobile-auth-actions">
+                            <RouterLink to="/booking" className="btn btn-primary" style={{ width: '100%', borderRadius: '12px', marginBottom: '1rem' }} onClick={() => setIsOpen(false)}>Book Service</RouterLink>
                             <button onClick={handleLogout} className="btn btn-secondary" style={{ width: '100%', borderRadius: '12px' }}>Sign Out</button>
                         </div>
                     )}
@@ -128,12 +106,24 @@ const Navbar = () => {
                 {/* Right Side Actions (Desktop) */}
                 <div className="nav-actions">
                     {user ? (
-                        <div className="user-nav-actions">
-                            {user.role === 'admin' && (
-                                <RouterLink to="/admin" className="nav-link admin-link">Admin</RouterLink>
-                            )}
-                            <span className="user-greeting" style={{ marginLeft: '1rem' }}>Hi, {user.name?.split(' ')[0]}</span>
-                            <button onClick={handleLogout} className="btn btn-secondary" style={{ padding: '0.5rem 1.2rem', borderRadius: '50px', fontSize: '0.75rem', marginLeft: '0.5rem' }}>Sign Out</button>
+                        <div className="user-nav-actions" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                            <RouterLink to="/booking" className="btn btn-primary btn-sm desktop-only-btn" style={{ padding: '0.5rem 1rem', fontSize: '0.75rem' }}>
+                                <FiZap style={{ marginRight: '5px' }} /> Book Now
+                            </RouterLink>
+
+                            <RouterLink to="/dashboard/notifications" className="nav-icon-btn" aria-label="Notifications">
+                                <FiBell />
+                                {unreadNotifications > 0 && <span className="icon-badge">{unreadNotifications}</span>}
+                            </RouterLink>
+
+                            <RouterLink to="/dashboard/chat" className="nav-icon-btn" aria-label="Messages">
+                                <FiMessageSquare />
+                            </RouterLink>
+
+                            <div className="user-profile-trigger">
+                                <span className="user-greeting">Hi, {user.name?.split(' ')[0]}</span>
+                                <button onClick={handleLogout} className="btn btn-secondary" style={{ padding: '0.5rem 1rem', borderRadius: '50px', fontSize: '0.7rem', marginLeft: '0.5rem' }}>Sign Out</button>
+                            </div>
                         </div>
                     ) : (
                         <div className="auth-nav-actions">
