@@ -51,7 +51,11 @@ const UserServices = () => {
                                 ))}
                             </ul>
 
-                            <Link to="/booking" className="btn btn-primary" style={{ width: '100%', marginTop: 'auto' }}>
+                            <Link
+                                to={`/booking?service=${encodeURIComponent(service.title)}`}
+                                className="btn btn-primary"
+                                style={{ width: '100%', marginTop: 'auto' }}
+                            >
                                 <span>Book This Service</span> <FiArrowRight style={{ marginLeft: '8px' }} />
                             </Link>
                         </div>

@@ -6,12 +6,29 @@ import { FiStar, FiCreditCard, FiZap, FiCheck, FiArrowRight, FiInfo } from 'reac
 import { Link } from 'react-router-dom';
 
 const UserSubscription = () => {
-    const { user } = useAuth();
-    const { plans = [] } = useData();
+    const { user, refreshProfile } = useAuth();
+    const { plans = [], updateUserSubscription } = useData();
+    const [isUpdating, setIsUpdating] = useState(false);
 
-    // Map plans to include features if they don't have them
     const currentPlanName = user?.subscriptionPlan || 'No Active Plan';
     const currentPlan = plans.find(p => p.name === currentPlanName) || null;
+
+    const handleSwitchPlan = async (planName) => {
+        if (!user?.id) return;
+        setIsUpdating(true);
+        const res = await updateUserSubscription(user.id, planName);
+        if (res.success) {
+            await refreshProfile();
+            alert(`Plan updated to ${planName} successfully!`);
+        } else {
+            alert("Failed to update plan. Please try again.");
+        }
+        setIsUpdating(false);
+    };
+
+    const handleAction = (action) => {
+        alert(`${action} feature is being prepared. Your executive care team will contact you shortly regarding billing updates.`);
+    };
 
     return (
         <div className="user-subscription">
@@ -65,8 +82,8 @@ const UserSubscription = () => {
                         )}
 
                         <div style={{ display: 'flex', gap: '1rem' }}>
-                            <button className="btn btn-primary" style={{ flex: 1 }}>Manage Billing</button>
-                            <button className="btn btn-secondary" style={{ flex: 1 }}>Cancel Plan</button>
+                            <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => handleAction('Manage Billing')}>Manage Billing</button>
+                            <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => handleAction('Cancel Plan')}>Cancel Plan</button>
                         </div>
                     </motion.div>
 
@@ -91,15 +108,20 @@ const UserSubscription = () => {
                         <p style={{ color: '#666', fontSize: '0.9rem', marginBottom: '2rem' }}>Looking for more? Change your plan anytime to fit your automotive care needs.</p>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            {plans.filter(p => p.name !== currentPlanName).map(plan => (
+                            {plans.filter(p => !p.name.toLowerCase().includes(currentPlanName.toLowerCase().replace(' plan', ''))).map(plan => (
                                 <div key={plan.id} style={{ padding: '1.2rem', border: '1px solid #222', borderRadius: '12px', background: 'rgba(0,0,0,0.2)', transition: '0.3s' }} className="plan-choice-card">
                                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                                         <div style={{ color: '#fff', fontWeight: 'bold' }}>{plan.name}</div>
                                         <div style={{ color: 'var(--color-gold)', fontWeight: 'bold' }}>${plan.price}</div>
                                     </div>
                                     <div style={{ color: '#555', fontSize: '0.75rem', marginBottom: '1rem' }}>{plan.features?.slice(0, 2).join(' • ')}</div>
-                                    <button className="btn btn-secondary" style={{ width: '100%', padding: '0.5rem', fontSize: '0.75rem' }}>
-                                        Upgrade to {plan.name.split(' ')[0]} <FiArrowRight style={{ marginLeft: '5px' }} />
+                                    <button
+                                        className="btn btn-secondary"
+                                        style={{ width: '100%', padding: '0.5rem', fontSize: '0.75rem', opacity: isUpdating ? 0.7 : 1 }}
+                                        disabled={isUpdating}
+                                        onClick={() => handleSwitchPlan(plan.name)}
+                                    >
+                                        {isUpdating ? 'Pulsing...' : `Upgrade to ${plan.name.split(' ')[0]}`} <FiArrowRight style={{ marginLeft: '5px' }} />
                                     </button>
                                 </div>
                             ))}

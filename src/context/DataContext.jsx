@@ -409,12 +409,20 @@ export const DataProvider = ({ children }) => {
     // Messages & Conversations
     const sendMessage = async (msg) => {
         const id = `msg-${Date.now()}`;
-        const newMsg = { ...msg, id };
-        try {
-            await supabase.from('messages').insert(newMsg);
-            setMessages([...messages, newMsg]);
+        const dbMsg = {
+            id,
+            conversation_id: msg.conversationId,
+            sender: msg.sender,
+            text: msg.text,
+            timestamp: msg.timestamp,
+            read: false
+        };
 
-            // Update conversation
+        try {
+            await supabase.from('messages').insert(dbMsg);
+            setMessages([...messages, { ...dbMsg, conversationId: msg.conversationId }]);
+
+            // Update conversation last message
             await supabase.from('conversations').update({
                 last_message: msg.text,
                 last_message_time: msg.timestamp
@@ -422,7 +430,7 @@ export const DataProvider = ({ children }) => {
 
             setConversations(conversations.map(c =>
                 c.id === msg.conversationId
-                    ? { ...c, lastMessage: msg.text, lastMessageTime: msg.timestamp }
+                    ? { ...c, last_message: msg.text, last_message_time: msg.timestamp }
                     : c
             ));
         } catch (err) { console.error("Send Message Error:", err); }
@@ -439,16 +447,29 @@ export const DataProvider = ({ children }) => {
 
     const addConversation = async (convo) => {
         const id = `conv-${Date.now()}`;
-        const newConvo = { ...convo, id };
+        const dbConvo = {
+            id,
+            customer_id: convo.customerId,
+            customer_name: convo.customerName,
+            last_message: convo.lastMessage,
+            last_message_time: convo.lastMessageTime
+        };
         try {
-            await supabase.from('conversations').insert({
-                ...newConvo,
-                customer_id: convo.customerId, // assuming it's UUID
-                customer_name: convo.customerName
-            });
-            setConversations([newConvo, ...conversations]);
-            return newConvo;
+            await supabase.from('conversations').insert(dbConvo);
+            setConversations([dbConvo, ...conversations]);
+            return dbConvo;
         } catch (err) { console.error("Add Conversation Error:", err); return null; }
+    };
+
+    const updateUserSubscription = async (userId, planName) => {
+        try {
+            await supabase.from('profiles').update({ subscription_plan: planName }).eq('id', userId);
+            setUsers(users.map(u => u.id === userId ? { ...u, subscriptionPlan: planName } : u));
+            return { success: true };
+        } catch (err) {
+            console.error("Update Subscription Error:", err);
+            return { success: false, message: err.message };
+        }
     };
 
     // Admin Notifications
@@ -553,6 +574,7 @@ export const DataProvider = ({ children }) => {
             bookings, addBooking, updateBooking, deleteBooking,
             users, addUser, deleteUser, updateUsers,
             conversations, messages, sendMessage, markAsRead, addConversation,
+            updateUserSubscription,
             adminNotifications, addAdminNotification, markNotificationRead, clearAllNotifications,
             userNotifications, sendUserNotification, clearUserNotifications,
             broadcasts, addBroadcast,

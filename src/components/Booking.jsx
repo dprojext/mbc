@@ -19,6 +19,7 @@ const Booking = () => {
     const [modalOpen, setModalOpen] = useState(false);
     const [showMap, setShowMap] = useState(false);
     const [isLocationConfirmed, setIsLocationConfirmed] = useState(false);
+    const [timePeriod, setTimePeriod] = useState('AM');
 
     // Find previous vehicles for this user
     const userPrevBookings = bookings.filter(b => b.customer_id === user?.id || b.email === user?.email);
@@ -36,13 +37,18 @@ const Booking = () => {
         notes: ''
     });
 
-    // Handle URL parameters (e.g., ?service=Signature+Wash)
+    // Robust pre-selection from search params
     useEffect(() => {
         const serviceParam = searchParams.get('service');
-        if (serviceParam) {
-            setFormData(prev => ({ ...prev, service: serviceParam }));
+        if (serviceParam && services.length > 0) {
+            const match = services.find(s => s.title.toLowerCase() === serviceParam.toLowerCase()) ||
+                plans.find(p => p.name.toLowerCase().includes(serviceParam.toLowerCase()));
+
+            if (match) {
+                setFormData(prev => ({ ...prev, service: match.title || match.name }));
+            }
         }
-    }, [searchParams]);
+    }, [searchParams, services, plans]);
 
     const showContactFields = bookingFor === 'other' || (!user?.name || !user?.phone);
 
@@ -95,7 +101,6 @@ const Booking = () => {
     const closeModal = () => setModalOpen(false);
     const today = new Date().toISOString().split('T')[0];
 
-    // Refined Time Slots for appealing grid
     const morningSlots = ['8:00 AM', '9:30 AM', '11:00 AM'];
     const afternoonSlots = ['1:00 PM', '2:30 PM', '4:00 PM', '5:30 PM'];
 
@@ -263,30 +268,56 @@ const Booking = () => {
                                 </div>
                             </div>
 
-                            <div style={{ marginBottom: '1.5rem' }}>
-                                <label style={{ color: '#888', fontSize: '0.75rem', marginBottom: '0.8rem', display: 'block' }}>Preferred Time</label>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem' }}>
-                                    {[...morningSlots, ...afternoonSlots].map(slot => (
-                                        <button
-                                            key={slot}
-                                            type="button"
-                                            onClick={() => setFormData(prev => ({ ...prev, time: slot }))}
-                                            style={{
-                                                padding: '0.6rem 1rem',
-                                                borderRadius: '8px',
-                                                fontSize: '0.8rem',
-                                                cursor: 'pointer',
-                                                transition: '0.3s',
-                                                background: formData.time === slot ? 'var(--color-gold)' : 'rgba(255,255,255,0.03)',
-                                                border: '1px solid',
-                                                borderColor: formData.time === slot ? 'var(--color-gold)' : '#222',
-                                                color: formData.time === slot ? '#000' : '#888',
-                                                fontWeight: formData.time === slot ? 'bold' : 'normal'
-                                            }}
-                                        >
-                                            {slot}
-                                        </button>
-                                    ))}
+                            <div style={{ marginBottom: '2rem' }}>
+                                <label style={{ color: '#888', fontSize: '0.75rem', marginBottom: '1.2rem', display: 'block', textTransform: 'uppercase', letterSpacing: '1px' }}>Preferred Time</label>
+
+                                <div style={{ background: '#111', padding: '1.5rem', borderRadius: '20px', border: '1px solid #222' }}>
+                                    <div style={{ display: 'flex', background: '#0a0a0a', padding: '0.3rem', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid #222' }}>
+                                        {['AM', 'PM'].map(p => (
+                                            <button
+                                                key={p}
+                                                type="button"
+                                                onClick={() => setTimePeriod(p)}
+                                                style={{
+                                                    flex: 1, padding: '0.6rem', borderRadius: '8px', border: 'none',
+                                                    background: timePeriod === p ? 'var(--color-gold)' : 'transparent',
+                                                    color: timePeriod === p ? '#000' : '#555',
+                                                    fontWeight: 'bold', cursor: 'pointer', transition: '0.3s'
+                                                }}
+                                            >
+                                                {p === 'AM' ? 'Morning' : 'Afternoon'}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.8rem' }}>
+                                        {(timePeriod === 'AM' ? morningSlots : afternoonSlots).map(slot => (
+                                            <button
+                                                key={slot}
+                                                type="button"
+                                                onClick={() => setFormData(prev => ({ ...prev, time: slot }))}
+                                                style={{
+                                                    padding: '0.8rem',
+                                                    borderRadius: '12px',
+                                                    fontSize: '0.85rem',
+                                                    cursor: 'pointer',
+                                                    transition: '0.3s',
+                                                    background: formData.time === slot ? 'rgba(201,169,106,0.1)' : 'transparent',
+                                                    border: '1px solid',
+                                                    borderColor: formData.time === slot ? 'var(--color-gold)' : '#222',
+                                                    color: formData.time === slot ? 'var(--color-gold)' : '#888',
+                                                    fontWeight: formData.time === slot ? 'bold' : 'normal',
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    alignItems: 'center',
+                                                    gap: '0.4rem'
+                                                }}
+                                            >
+                                                <FiClock size={14} style={{ opacity: formData.time === slot ? 1 : 0.3 }} />
+                                                {slot}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
 
