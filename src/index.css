@@ -2132,16 +2132,26 @@ a.method-value:hover {
     }
 
     .nav-menu .nav-link {
-        font-size: 1.5rem;
-        /* Larger links for full screen */
+        font-size: 1.1rem;
+        /* Smaller text for burger menu */
         font-weight: 500;
-        letter-spacing: 0.15em;
+        letter-spacing: 0.12em;
+        padding: 0.8rem 0;
+        width: 100%;
+        display: block;
+        transition: 0.3s;
+    }
+
+    .nav-menu .nav-link:hover {
+        color: var(--color-gold);
+        letter-spacing: 0.18em;
     }
 
     .nav-toggle {
         display: flex;
         z-index: 2100;
         position: relative;
+        padding-left: 1.2rem;
     }
 
     .nav-actions {
@@ -2292,6 +2302,31 @@ a.method-value:hover {
 @media (max-width: 768px) {
     .mobile-scroll-dots {
         display: flex;
+    }
+
+    .user-dashboard-wrapper main {
+        padding: 6rem 0 2rem !important;
+    }
+
+    .section-container {
+        padding: 0 1rem !important;
+    }
+
+    .admin-grid-1,
+    .admin-grid-2,
+    .admin-grid-3 {
+        grid-template-columns: 1fr !important;
+        gap: 1.2rem !important;
+    }
+
+    .admin-card {
+        padding: 1.25rem !important;
+    }
+
+    .admin-flex-between {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 1rem !important;
     }
 }
 

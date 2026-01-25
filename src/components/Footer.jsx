@@ -1,13 +1,61 @@
 import React from 'react';
 import { useData } from '../context/DataContext';
+import { useAuth } from '../context/AuthContext';
 
 const Footer = () => {
     const { settings } = useData();
+    const { user } = useAuth();
 
     // Helper to check if logo is an image URL
     const isImageLogo = (str) => {
         return str && (str.startsWith('data:') || str.startsWith('http') || str.startsWith('/'));
     };
+
+    if (user) {
+        return (
+            <footer className="footer minimalistic-footer" style={{ padding: '2rem 0', background: 'rgba(5,5,5,0.8)', borderTop: '1px solid rgba(255,255,255,0.03)' }}>
+                <div className="section-container" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                        {/* Left: Small Logo & Short Name */}
+                        <div className="footer-brand-mini" style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                            {isImageLogo(settings?.logo) ? (
+                                <img src={settings.logo} alt="Logo" style={{ height: '24px' }} />
+                            ) : (
+                                <span style={{ color: 'var(--color-gold)', fontWeight: 'bold', fontSize: '1.1rem', letterSpacing: '1px' }}>{settings?.logo || 'MBC'}</span>
+                            )}
+                            <span style={{ color: '#fff', fontSize: '0.75rem', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '2px' }}>{settings?.siteName?.split(' ')[0] || 'METRO'}</span>
+                        </div>
+
+                        {/* Right: Documentation */}
+                        <div className="footer-doc-mini" style={{ display: 'flex', gap: '1.5rem' }}>
+                            {(settings?.documents || []).filter(d => d.showInFooter).map(doc => (
+                                <a key={doc.id} href={`#doc-${doc.id}`} style={{ color: '#666', fontSize: '0.75rem', textDecoration: 'none', transition: '0.3s' }} className="mini-link">{doc.name}</a>
+                            ))}
+                            {!settings?.documents && (
+                                <>
+                                    <a href="#tos" style={{ color: '#666', fontSize: '0.75rem', textDecoration: 'none' }} className="mini-link">Terms</a>
+                                    <a href="#privacy" style={{ color: '#666', fontSize: '0.75rem', textDecoration: 'none' }} className="mini-link">Privacy</a>
+                                </>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Center Below: Copyright */}
+                    <div style={{ textAlign: 'center', borderTop: '1px solid rgba(255,255,255,0.02)', paddingTop: '1.5rem' }}>
+                        <p style={{ color: '#444', fontSize: '0.65rem', margin: 0, letterSpacing: '1px' }}>
+                            &copy; {new Date().getFullYear()} {settings?.siteName || 'METRO BLACKLINE CARE'}. ALL RIGHTS RESERVED.
+                        </p>
+                    </div>
+                </div>
+                <style>{`
+                    .mini-link:hover { color: var(--color-gold) !important; }
+                    @media (max-width: 600px) {
+                        .minimalistic-footer .section-container > div:first-child { flex-direction: column; text-align: center; }
+                    }
+                `}</style>
+            </footer>
+        );
+    }
 
     return (
         <footer className="footer">
@@ -104,4 +152,3 @@ const Footer = () => {
 };
 
 export default Footer;
-
