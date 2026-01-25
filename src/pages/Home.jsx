@@ -6,6 +6,7 @@ import About from '../components/About';
 import Membership from '../components/Membership';
 import Contact from '../components/Contact';
 import Footer from '../components/Footer';
+import { useData } from '../context/DataContext';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 

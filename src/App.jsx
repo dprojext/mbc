@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { DataProvider } from './context/DataContext';
 import ThemeInjector from './components/ThemeInjector';
 import DocumentViewer from './components/DocumentViewer';
+import ScrollToTop from './components/ScrollToTop';
 import { ToastProvider } from './context/ToastContext';
 
 import Home from './pages/Home';
@@ -70,6 +71,7 @@ function App() {
         <ToastProvider>
           <ThemeInjector />
           <DocumentViewer />
+          <ScrollToTop />
           <AuthProvider>
             <Routes>
               <Route path="/" element={<Home />} />
