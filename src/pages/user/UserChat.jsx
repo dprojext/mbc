@@ -25,6 +25,10 @@ const UserChat = () => {
 
     const handleSend = async () => {
         if (!newMessage.trim() || isSending) return;
+        if (!user?.id) {
+            console.error("[CHAT] No authenticated user found.");
+            return;
+        }
         setIsSending(true);
 
         try {
@@ -35,24 +39,35 @@ const UserChat = () => {
             // If no conversation exists yet, create one
             if (!convoId) {
                 console.log("[CHAT] Creating new executive conversation...");
+                const customerName = user.name || user.email?.split('@')[0] || 'Guest User';
                 const newConvo = await addConversation({
-                    customerName: user.name,
+                    customerName: customerName,
                     customerId: user.id,
                     lastMessage: newMessage.trim(),
                     lastMessageTime: new Date().toISOString()
                 });
-                if (newConvo) convoId = newConvo.id;
+                if (newConvo) {
+                    convoId = newConvo.id;
+                    console.log("[CHAT] New conversation created:", convoId);
+                } else {
+                    console.error("[CHAT] Failed to create conversation.");
+                    return;
+                }
             }
 
             if (convoId) {
                 console.log("[CHAT] Sending message to:", convoId);
-                await sendMessage({
+                const sent = await sendMessage({
                     conversationId: convoId,
                     sender: 'user',
                     text: newMessage.trim(),
                     timestamp: new Date().toISOString()
                 });
-                setNewMessage('');
+                if (sent) {
+                    setNewMessage('');
+                } else {
+                    console.error("[CHAT] Message failed to send.");
+                }
             } else {
                 console.error("[CHAT] Failed to establish conversation ID.");
             }
@@ -70,7 +85,7 @@ const UserChat = () => {
         }
     };
 
-    const myMessages = myConvo ? messages.filter(m => m.conversationId === myConvo.id) : [];
+    const myMessages = myConvo ? messages.filter(m => m.conversationId === myConvo.id || m.conversation_id === myConvo.id) : [];
 
     const formatTime = (ts) => {
         if (!ts) return '';
@@ -78,11 +93,11 @@ const UserChat = () => {
     };
 
     return (
-        <div className="user-chat-container" style={{ height: 'calc(100vh - 12rem)', display: 'flex', flexDirection: 'column' }}>
-            <header className="admin-flex-between" style={{ marginBottom: '2rem' }}>
+        <div className="user-chat-container" style={{ minHeight: 'calc(100vh - 15rem)', display: 'flex', flexDirection: 'column' }}>
+            <header className="admin-flex-between" style={{ marginBottom: '1.5rem' }}>
                 <div>
-                    <h1 style={{ color: '#fff', fontSize: '2rem', margin: 0 }}>Support <span className="gold">Chat</span></h1>
-                    <p style={{ color: '#888', marginTop: '0.4rem' }}>Chat directly with our executive care team.</p>
+                    <h1 style={{ color: '#fff', fontSize: '1.8rem', margin: 0 }}>Support <span className="gold">Chat</span></h1>
+                    <p style={{ color: '#888', marginTop: '0.4rem', fontSize: '0.85rem' }}>Direct secure link to executive care.</p>
                 </div>
             </header>
 
@@ -104,7 +119,7 @@ const UserChat = () => {
                 {/* Messages Body */}
                 <div
                     ref={scrollContainerRef}
-                    style={{ flex: 1, overflowY: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}
+                    style={{ flex: 1, minHeight: '300px', overflowY: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}
                 >
                     {myMessages.length === 0 && (
                         <div style={{ textAlign: 'center', padding: '3rem 2rem', color: '#444' }}>
@@ -116,6 +131,9 @@ const UserChat = () => {
 
                     {myMessages.map((msg, idx) => {
                         const isMe = msg.sender === 'user';
+                        const isDeleted = msg.deleted;
+                        const isEdited = msg.edited;
+
                         return (
                             <motion.div
                                 key={idx}
@@ -123,7 +141,7 @@ const UserChat = () => {
                                 animate={{ opacity: 1, scale: 1 }}
                                 style={{
                                     alignSelf: isMe ? 'flex-end' : 'flex-start',
-                                    maxWidth: '80%',
+                                    maxWidth: '90%',
                                     display: 'flex',
                                     flexDirection: 'column',
                                     alignItems: isMe ? 'flex-end' : 'flex-start'
@@ -132,24 +150,32 @@ const UserChat = () => {
                                 <div style={{
                                     padding: '1rem 1.25rem',
                                     borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-                                    background: isMe ? 'var(--color-gold)' : '#222',
-                                    color: isMe ? '#000' : '#fff',
+                                    background: isDeleted ? 'rgba(255,68,68,0.05)' : (isMe ? 'var(--color-gold)' : '#222'),
+                                    color: (isMe && !isDeleted) ? '#000' : '#fff',
                                     fontSize: '0.95rem',
                                     lineHeight: '1.5',
-                                    boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
+                                    boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
+                                    border: isDeleted ? '1px dashed rgba(255,68,68,0.3)' : 'none'
                                 }}>
-                                    {msg.text}
+                                    {isDeleted ? (
+                                        <span style={{ fontStyle: 'italic', opacity: 0.6 }}>Message Deleted</span>
+                                    ) : (
+                                        msg.text
+                                    )}
                                 </div>
                                 <div style={{
                                     marginTop: '0.5rem',
-                                    fontSize: '0.7rem',
+                                    fontSize: '0.65rem',
                                     color: '#555',
                                     display: 'flex',
                                     alignItems: 'center',
-                                    gap: '0.3rem'
+                                    gap: '0.4rem',
+                                    fontWeight: 'bold'
                                 }}>
-                                    {formatTime(msg.timestamp)}
-                                    {isMe && <FiCheckCircle size={10} />}
+                                    <span>{formatTime(msg.timestamp)}</span>
+                                    {isEdited && !isDeleted && <span>• EDITED {formatTime(msg.edited_at)}</span>}
+                                    {isDeleted && <span>• REMOVED {formatTime(msg.deleted_at)}</span>}
+                                    {isMe && !isDeleted && <FiCheckCircle size={10} />}
                                 </div>
                             </motion.div>
                         );

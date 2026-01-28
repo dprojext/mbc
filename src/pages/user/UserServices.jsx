@@ -1,11 +1,24 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useData } from '../../context/DataContext';
 import { motion } from 'framer-motion';
-import { FiCheck, FiArrowRight, FiInfo } from 'react-icons/fi';
-import { Link } from 'react-router-dom';
+import { FiCheck, FiArrowRight, FiInfo, FiMessageSquare } from 'react-icons/fi';
+import { Link, useNavigate } from 'react-router-dom';
+import ConciergeModal from '../../components/ConciergeModal';
 
 const UserServices = () => {
-    const { services = [] } = useData();
+    const { services = [], settings } = useData();
+    const navigate = useNavigate();
+    const [isConciergeOpen, setIsConciergeOpen] = useState(false);
+    const [conciergeData, setConciergeData] = useState({ name: '', price: '' });
+
+    const handleBookClick = (service) => {
+        if (settings?.paymentsEnabled === false) {
+            setConciergeData({ name: service.title, price: service.price });
+            setIsConciergeOpen(true);
+        } else {
+            navigate(`/booking?service=${encodeURIComponent(service.title)}`);
+        }
+    };
 
     return (
         <div className="user-services">
@@ -19,7 +32,7 @@ const UserServices = () => {
                 </div>
             </header>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '1.5rem' }}>
                 {services.map((service, idx) => (
                     <motion.div
                         key={service.id}
@@ -51,13 +64,13 @@ const UserServices = () => {
                                 ))}
                             </ul>
 
-                            <Link
-                                to={`/booking?service=${encodeURIComponent(service.title)}`}
-                                className="btn btn-primary"
-                                style={{ width: '100%', marginTop: 'auto' }}
+                            <button
+                                onClick={() => handleBookClick(service)}
+                                className={settings?.paymentsEnabled === false ? "btn btn-secondary" : "btn btn-primary"}
+                                style={{ width: '100%', marginTop: 'auto', background: settings?.paymentsEnabled === false ? 'rgba(201,169,106,0.05)' : '', color: settings?.paymentsEnabled === false ? 'var(--color-gold)' : '', border: settings?.paymentsEnabled === false ? '1px solid rgba(201,169,106,0.2)' : '' }}
                             >
-                                <span>Book This Service</span> <FiArrowRight style={{ marginLeft: '8px' }} />
-                            </Link>
+                                <span>{settings?.paymentsEnabled === false ? 'Contact for Purchase' : 'Book This Service'}</span> {settings?.paymentsEnabled === false ? <FiMessageSquare style={{ marginLeft: '8px' }} /> : <FiArrowRight style={{ marginLeft: '8px' }} />}
+                            </button>
                         </div>
                     </motion.div>
                 ))}
@@ -69,6 +82,12 @@ const UserServices = () => {
                 <p style={{ color: '#666', maxWidth: '500px', margin: '0 auto 2rem' }}>Talk to our specialists about custom ceramic applications or multi-vehicle fleet discounts.</p>
                 <Link to="/dashboard/chat" className="btn btn-secondary">Contact Concierge Team</Link>
             </div>
+            <ConciergeModal
+                isOpen={isConciergeOpen}
+                onClose={() => setIsConciergeOpen(false)}
+                itemName={conciergeData.name}
+                itemPrice={conciergeData.price}
+            />
         </div>
     );
 };

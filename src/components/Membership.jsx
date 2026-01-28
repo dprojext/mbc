@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useData } from '../context/DataContext';
-import { FiStar, FiCheckCircle } from 'react-icons/fi';
+import ConciergeModal from './ConciergeModal';
+import { FiStar, FiCheckCircle, FiMessageSquare } from 'react-icons/fi';
 
 const Membership = () => {
-    const { plans, settings } = useData();
+    const { plans = [], settings = {} } = useData();
+    const navigate = useNavigate();
+    const [isConciergeOpen, setIsConciergeOpen] = useState(false);
+    const [conciergeData, setConciergeData] = useState({ name: '', price: '' });
     const [currency, setCurrency] = useState('USD');
-    const exchangeRate = 56.5;
+    const [exchangeRate, setExchangeRate] = useState(1);
 
     const scrollRef = React.useRef(null);
     const [scrollProgress, setScrollProgress] = React.useState(0);
@@ -136,14 +140,22 @@ const Membership = () => {
                                         </li>
                                     ))}
                                 </ul>
-                                <Link
-                                    to={`/booking?service=${encodeURIComponent(plan.name)}`}
+                                <button
+                                    onClick={() => {
+                                        if (settings?.paymentsEnabled === false) {
+                                            setConciergeData({ name: plan.name, price: `$${plan.price}` });
+                                            setIsConciergeOpen(true);
+                                        } else {
+                                            navigate(`/booking?service=${encodeURIComponent(plan.name)}`);
+                                        }
+                                    }}
                                     className={index === featuredIndex ? "btn btn-primary plan-btn" : "btn btn-secondary plan-btn"}
+                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.8rem' }}
                                 >
-                                    {index === featuredIndex ? <FiStar className="btn-icon" /> : <FiCheckCircle className="btn-icon" />}
-                                    <span>{plan.type === 'subscription' ? 'Select Plan' : 'Book Now'}</span>
+                                    {settings?.paymentsEnabled === false ? <FiMessageSquare /> : (index === featuredIndex ? <FiStar className="btn-icon" /> : <FiCheckCircle className="btn-icon" />)}
+                                    <span>{settings?.paymentsEnabled === false ? 'Contact to Join' : (plan.type === 'subscription' ? 'Select Plan' : 'Book Now')}</span>
                                     {index === featuredIndex && <div className="btn-shine"></div>}
-                                </Link>
+                                </button>
                             </div>
                         </motion.div>
                     ))}
@@ -162,7 +174,13 @@ const Membership = () => {
                     })}
                 </div>
             </div>
-        </section >
+            <ConciergeModal
+                isOpen={isConciergeOpen}
+                onClose={() => setIsConciergeOpen(false)}
+                itemName={conciergeData.name}
+                itemPrice={conciergeData.price}
+            />
+        </section>
     );
 };
 

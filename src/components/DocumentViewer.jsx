@@ -11,8 +11,9 @@ const DocumentViewer = () => {
         const handleHashChange = () => {
             const hash = window.location.hash;
             if (hash.startsWith('#doc-')) {
-                const docId = parseInt(hash.replace('#doc-', ''));
-                const doc = settings?.documents?.find(d => d.id === docId);
+                const docIdStr = hash.replace('#doc-', '');
+                // Try finding by direct string ID first, then by numeric conversion
+                const doc = settings?.documents?.find(d => String(d.id) === docIdStr || String(d.id) === `doc-${docIdStr}`);
                 if (doc) {
                     setActiveDoc(doc);
                 }

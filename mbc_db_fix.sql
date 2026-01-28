@@ -54,15 +54,44 @@ ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS accent_color TEXT;
 ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS typography TEXT;
 ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS show_legal BOOLEAN DEFAULT TRUE;
 
--- REFRESH POLICIES
+-- 5. RESOLVE INFINITE RECURSION (Executive Fix)
+-- Create a helper function that bypasses RLS to check roles safely.
+CREATE OR REPLACE FUNCTION public.check_user_is_admin()
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN (
+    SELECT (role = 'admin')
+    FROM public.profiles
+    WHERE id = auth.uid()
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Apply non-recursive policies to Profiles
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Profiles are viewable by owner and admin" ON public.profiles;
 CREATE POLICY "Profiles are viewable by owner and admin" ON public.profiles 
-    FOR SELECT USING (auth.uid() = id OR (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'admin');
+    FOR SELECT USING (
+        auth.uid() = id 
+        OR 
+        public.check_user_is_admin()
+    );
 
-CREATE POLICY "Users can update own profile." ON public.profiles FOR UPDATE USING (auth.uid() = id);
+DROP POLICY IF EXISTS "Users can update own profile." ON public.profiles;
+CREATE POLICY "Users can update own profile." ON public.profiles 
+    FOR UPDATE USING (auth.uid() = id);
 
--- NOTIFICATIONS
+-- 6. SYSTEM-WIDE SECURITY SYNC
+-- Apply admin oversight to other business-critical tables
+ALTER TABLE public.site_settings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Settings viewable by all" ON public.site_settings;
+CREATE POLICY "Settings viewable by all" ON public.site_settings FOR SELECT USING (TRUE);
+
+DROP POLICY IF EXISTS "Settings manageable by admin" ON public.site_settings;
+CREATE POLICY "Settings manageable by admin" ON public.site_settings 
+    FOR UPDATE USING (public.check_user_is_admin());
+
+-- 7. NOTIFICATIONS
 CREATE TABLE IF NOT EXISTS public.notifications (
     id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -73,4 +102,6 @@ CREATE TABLE IF NOT EXISTS public.notifications (
     timestamp TIMESTAMPTZ DEFAULT NOW()
 );
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can view own notifications." ON public.notifications FOR SELECT USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can view own notifications." ON public.notifications;
+CREATE POLICY "Users can view own notifications." ON public.notifications 
+    FOR SELECT USING (auth.uid() = user_id OR public.check_user_is_admin());

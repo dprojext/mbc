@@ -1,16 +1,26 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
-import { FiBell, FiCheckCircle, FiInfo, FiAlertTriangle, FiTrash2, FiClock } from 'react-icons/fi';
+import { FiBell, FiCheckCircle, FiInfo, FiAlertTriangle, FiTrash2, FiClock, FiX } from 'react-icons/fi';
 
 const UserNotificationCenter = () => {
     const { user } = useAuth();
-    const { userNotifications = [], clearUserNotifications } = useData();
+    const { userNotifications = [], clearUserNotifications, markNotificationRead, deleteNotification } = useData();
+    const location = useLocation();
+    const [selectedNotif, setSelectedNotif] = useState(null);
 
     const myNotifications = userNotifications
         .filter(n => n.user_id === user?.id)
         .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    useEffect(() => {
+        if (location.state?.openNotifId) {
+            const notif = myNotifications.find(n => n.id === location.state.openNotifId);
+            if (notif) setSelectedNotif(notif);
+        }
+    }, [location, myNotifications]);
 
     const getIcon = (type) => {
         switch (type) {
@@ -28,16 +38,16 @@ const UserNotificationCenter = () => {
 
     return (
         <div className="user-notifications">
-            <header className="admin-flex-between" style={{ marginBottom: '2.5rem' }}>
+            <header className="admin-flex-between" style={{ marginBottom: '1.5rem' }}>
                 <div>
-                    <h1 style={{ color: '#fff', fontSize: '2rem', margin: 0 }}>Notification <span className="gold">Center</span></h1>
-                    <p style={{ color: '#888', marginTop: '0.4rem' }}>Stay updated with your service status and exclusive offers.</p>
+                    <h1 style={{ color: '#fff', fontSize: '1.8rem', margin: 0 }}>Notification <span className="gold">Center</span></h1>
+                    <p style={{ color: '#888', marginTop: '0.4rem', fontSize: '0.85rem' }}>Manage priority service status and alerts.</p>
                 </div>
                 {myNotifications.length > 0 && (
                     <button
                         onClick={clearUserNotifications}
                         className="btn btn-secondary"
-                        style={{ color: '#ff4444', border: '1px solid rgba(255,68,68,0.2)', background: 'rgba(255,68,68,0.05)' }}
+                        style={{ color: '#ff4444', border: '1px solid rgba(255,68,68,0.2)', background: 'rgba(255,68,68,0.05)', padding: '0.5rem 1rem', fontSize: '0.75rem' }}
                     >
                         <FiTrash2 style={{ marginRight: '8px' }} /> Clear All
                     </button>
@@ -58,8 +68,15 @@ const UserNotificationCenter = () => {
                                     borderBottom: '1px solid #1a1a1a',
                                     background: notif.read ? 'transparent' : 'rgba(var(--color-gold-rgb), 0.03)',
                                     display: 'flex',
-                                    gap: '1.2rem'
+                                    gap: '1.2rem',
+                                    cursor: 'pointer',
+                                    transition: '0.2s'
                                 }}
+                                onClick={() => {
+                                    setSelectedNotif(notif);
+                                    if (!notif.read) markNotificationRead(notif.id);
+                                }}
+                                whileHover={{ background: 'rgba(255,255,255,0.02)' }}
                             >
                                 <div style={{
                                     width: '45px', height: '45px', borderRadius: '12px',
@@ -70,16 +87,29 @@ const UserNotificationCenter = () => {
                                     {getIcon(notif.type)}
                                 </div>
                                 <div style={{ flex: 1 }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
-                                        <h3 style={{ color: '#fff', fontSize: '1rem', margin: 0, fontWeight: '600' }}>{notif.title}</h3>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#444', fontSize: '0.75rem' }}>
+                                    <div style={{ display: 'flex', flexDirection: window.innerWidth < 640 ? 'column' : 'row', justifyContent: 'space-between', marginBottom: '0.8rem', gap: '0.5rem' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                            <div style={{ color: 'var(--color-gold)', fontSize: '0.6rem', fontWeight: '900', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '0.2rem', opacity: 0.6 }}>Priority Alert</div>
+                                            <h3 style={{ color: '#fff', fontSize: '1.1rem', margin: 0, fontWeight: '800' }}>{notif.title}</h3>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#555', fontSize: '0.7rem' }}>
                                             <FiClock size={12} /> {formatTime(notif.timestamp)}
                                         </div>
                                     </div>
-                                    <p style={{ color: '#888', margin: 0, fontSize: '0.9rem', lineHeight: '1.5' }}>{notif.message}</p>
+
+                                    <div style={{
+                                        padding: '1.2rem',
+                                        background: 'rgba(255,255,255,0.01)',
+                                        borderRadius: '14px',
+                                        border: '1px solid rgba(255,255,255,0.03)',
+                                        marginTop: '0.5rem'
+                                    }}>
+                                        <p style={{ color: '#aaa', margin: 0, fontSize: '0.95rem', lineHeight: '1.6' }}>{notif.message}</p>
+                                    </div>
+
                                     {!notif.read && (
                                         <div style={{ marginTop: '0.8rem' }}>
-                                            <span style={{ fontSize: '0.7rem', color: 'var(--color-gold)', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.1em' }}>New Alert</span>
+                                            <div style={{ height: '2px', width: '20px', background: 'var(--color-gold)' }}></div>
                                         </div>
                                     )}
                                 </div>
@@ -99,6 +129,115 @@ const UserNotificationCenter = () => {
                     </div>
                 )}
             </div>
+
+            <AnimatePresence>
+                {selectedNotif && (
+                    <div className="modal active" onClick={() => setSelectedNotif(null)}>
+                        <motion.div
+                            className="modal-content glass-modal"
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            style={{
+                                maxWidth: '550px',
+                                padding: '2.5rem',
+                                borderRadius: '30px',
+                                background: 'rgba(10,10,10,0.95)',
+                                backdropFilter: 'blur(40px)',
+                                border: '1px solid rgba(255,255,255,0.05)',
+                                position: 'relative'
+                            }}
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <button
+                                onClick={() => setSelectedNotif(null)}
+                                style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', background: 'none', border: 'none', color: '#444', cursor: 'pointer' }}
+                            >
+                                <FiX size={20} />
+                            </button>
+
+                            <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '2.5rem', alignItems: 'flex-start' }}>
+                                <div style={{
+                                    width: '60px', height: '60px', borderRadius: '18px',
+                                    background: 'rgba(251,191,36,0.1)', display: 'flex',
+                                    alignItems: 'center', justifyContent: 'center', fontSize: '1.8rem',
+                                    flexShrink: 0, color: 'var(--color-gold)', border: '1px solid rgba(251,191,36,0.1)'
+                                }}>
+                                    {getIcon(selectedNotif.type)}
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                    <div style={{ color: 'var(--color-gold)', fontSize: '0.75rem', fontWeight: '900', letterSpacing: '0.3em', textTransform: 'uppercase', marginBottom: '0.6rem', opacity: 0.5 }}>Communication Subject</div>
+                                    <h2 style={{ color: '#fff', fontSize: '2.2rem', margin: 0, fontWeight: '800', fontFamily: 'var(--font-heading)', lineHeight: '1.2' }}>{selectedNotif.title}</h2>
+                                </div>
+                            </div>
+
+                            <div style={{
+                                background: 'rgba(255,255,255,0.015)',
+                                padding: '2.5rem',
+                                borderRadius: '25px',
+                                color: '#efefff',
+                                fontSize: '1.15rem',
+                                lineHeight: '1.8',
+                                border: '1px solid rgba(255,255,255,0.03)',
+                                marginBottom: '2.5rem',
+                                whiteSpace: 'pre-wrap',
+                                fontWeight: '300',
+                                fontFamily: 'var(--font-heading)'
+                            }}>
+                                {selectedNotif.message}
+
+                                {selectedNotif.data?.invoiceId && (
+                                    <div style={{
+                                        marginTop: '2rem',
+                                        padding: '1.5rem',
+                                        background: 'rgba(251,191,36,0.02)',
+                                        border: '1px solid rgba(251,191,36,0.1)',
+                                        borderRadius: '15px'
+                                    }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', color: 'var(--color-gold)', marginBottom: '1rem', fontWeight: 'bold', fontSize: '1rem' }}>
+                                            <FiFileText /> INVOICE DISCLOSURE
+                                        </div>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', fontSize: '0.85rem' }}>
+                                            <div>
+                                                <div style={{ color: '#444', textTransform: 'uppercase', fontSize: '0.65rem', fontWeight: '900' }}>Invoice Number</div>
+                                                <div style={{ color: '#fff' }}>#{selectedNotif.data.invoiceId}</div>
+                                            </div>
+                                            <div>
+                                                <div style={{ color: '#444', textTransform: 'uppercase', fontSize: '0.65rem', fontWeight: '900' }}>Billing Category</div>
+                                                <div style={{ color: '#fff' }}>{selectedNotif.data.planName}</div>
+                                            </div>
+                                            <div>
+                                                <div style={{ color: '#444', textTransform: 'uppercase', fontSize: '0.65rem', fontWeight: '900' }}>Settlement Amount</div>
+                                                <div style={{ color: 'var(--color-gold)', fontWeight: 'bold' }}>${selectedNotif.data.amount}</div>
+                                            </div>
+                                            <div>
+                                                <div style={{ color: '#444', textTransform: 'uppercase', fontSize: '0.65rem', fontWeight: '900' }}>Orchestration Hub</div>
+                                                <div style={{ color: '#fff' }}>{selectedNotif.data.gateway || 'Standard'}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #1a1a1a', paddingTop: '1.5rem' }}>
+                                <div style={{ color: '#444', fontSize: '0.75rem', fontFamily: 'monospace' }}>
+                                    RECEIVED: {formatTime(selectedNotif.timestamp)}
+                                </div>
+                                <button
+                                    className="btn btn-secondary"
+                                    style={{ padding: '0.7rem 2rem', borderRadius: '10px', color: '#ff4444', border: '1px solid rgba(255,68,68,0.2)' }}
+                                    onClick={() => {
+                                        deleteNotification(selectedNotif.id);
+                                        setSelectedNotif(null);
+                                    }}
+                                >
+                                    DISMISS
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

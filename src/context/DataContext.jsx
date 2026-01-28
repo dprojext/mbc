@@ -13,10 +13,11 @@ export const DataProvider = ({ children }) => {
         description: 'Experience unparalleled automotive excellence with our premium mobile detailing services.',
         legalText: '© 2026 Metro Blackline Care. All rights reserved.',
         logo: 'M',
-        colors: { primary: '#c9a96a', secondary: '#1a1a1a', accent: '#ffffff' },
+        favicon: '●',
+        colors: { primary: '#c9a96a', secondary: '#1a1a1a', accent: '#ffffff', background: '#0a0a0a' },
         typography: 'Nunito',
         showLegal: true,
-        seo: { title: 'Metro Blackline - Premium Mobile Car Wash', description: 'Top-rated mobile car wash and detailing service in Addis Ababa.' },
+        seo: { title: 'Metro Blackline - Premium Mobile Car Wash', description: 'Top-rated mobile car wash and detailing service in Addis Ababa.', ogImage: '' },
         documents: [],
         landingImages: {
             hero: '/images/hero-car.jpg',
@@ -36,7 +37,13 @@ export const DataProvider = ({ children }) => {
         footerSections: [
             { title: 'Services', links: [{ label: 'Signature Wash', url: '#services' }, { label: 'Interior Detail', url: '#services' }, { label: 'Ceramic Coating', url: '#services' }] },
             { title: 'Company', links: [{ label: 'About Us', url: '#about' }, { label: 'Contact', url: '#contact' }, { label: 'Careers', url: '#' }] }
-        ]
+        ],
+        paymentGateways: [
+            { id: 'bank', name: 'Bank Transfer', type: 'bank', enabled: true, details: '100012345678 - MBC PLC', bankName: 'MBC PLC', accountHolder: 'Metro Blackline Care', accountNumber: '100012345678', transferType: 'Internal/ACH' },
+            { id: 'mobile', name: 'Mobile Money', type: 'mobile', enabled: true, details: '*889#' },
+            { id: 'card', name: 'Credit/Debit Card', type: 'card', enabled: false, details: 'Stripe/Flutterwave' }
+        ],
+        paymentsEnabled: true
     };
 
     const initialServices = [];
@@ -81,6 +88,49 @@ export const DataProvider = ({ children }) => {
         return () => subscription.unsubscribe();
     }, []);
 
+    // --- Real-time Preview Synchronization ---
+    useEffect(() => {
+        const handleSync = () => {
+            const previewData = localStorage.getItem('preview_settings');
+            if (previewData) {
+                try {
+                    const parsed = JSON.parse(previewData);
+                    setSettings(prev => {
+                        // Only merge if the parsed data has content to avoid blanking
+                        if (!parsed || Object.keys(parsed).length === 0) return prev;
+
+                        const merged = { ...prev, ...parsed };
+                        // Deep merge for critical nested structures
+                        if (parsed.colors && prev.colors) merged.colors = { ...prev.colors, ...parsed.colors };
+                        if (parsed.contact && prev.contact) merged.contact = { ...prev.contact, ...parsed.contact };
+                        if (parsed.seo && prev.seo) merged.seo = { ...prev.seo, ...parsed.seo };
+                        return merged;
+                    });
+                } catch (e) { }
+            }
+        };
+
+        // Listen for storage events from other tabs/frames
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'preview_settings') handleSync();
+        });
+
+        // Initial check
+        handleSync();
+
+        return () => window.removeEventListener('storage', handleSync);
+    }, []);
+
+    // Function for admin to update local preview state without db hit
+    const liveUpdateSettings = (newSettings) => {
+        setSettings(prev => {
+            const next = { ...prev, ...newSettings };
+            localStorage.setItem('preview_settings', JSON.stringify(next));
+            return next;
+        });
+        window.dispatchEvent(new Event('storage'));
+    };
+
     // --- Supabase Synchronization Logic ---
 
     useEffect(() => {
@@ -89,7 +139,7 @@ export const DataProvider = ({ children }) => {
             try {
                 // parallel fetch all tables using allSettled so one failure doesn't block others
                 const results = await Promise.allSettled([
-                    supabase.from('site_settings').select('*').single(),
+                    supabase.from('site_settings').select('*'),
                     supabase.from('services').select('*'),
                     supabase.from('plans').select('*'),
                     supabase.from('profiles').select('*'),
@@ -129,32 +179,61 @@ export const DataProvider = ({ children }) => {
                 const fetchedAnalytics = getData(results[10], 'analytics_events');
                 const fetchedExports = getData(results[11], 'data_exports');
 
-                if (fetchedSettings) {
+                if (fetchedSettings && (Array.isArray(fetchedSettings) ? fetchedSettings.length > 0 : fetchedSettings)) {
+                    const s = Array.isArray(fetchedSettings) ? fetchedSettings[0] : fetchedSettings;
                     // Map snake_case to camelCase for settings with deep fallbacks
                     setSettings({
                         ...initialSettings,
-                        ...fetchedSettings,
-                        siteName: fetchedSettings.site_name || initialSettings.siteName,
-                        tagline: fetchedSettings.tagline || initialSettings.tagline,
-                        description: fetchedSettings.description || initialSettings.description,
-                        legalText: fetchedSettings.legal_text || initialSettings.legalText,
-                        logo: fetchedSettings.logo || initialSettings.logo,
+                        ...s,
+                        id: s.id,
+                        siteName: s.site_name || initialSettings.siteName,
+                        tagline: s.tagline || initialSettings.tagline,
+                        description: s.description || initialSettings.description,
+                        legalText: s.legal_text || initialSettings.legalText,
+                        logo: s.logo || initialSettings.logo,
+                        favicon: s.favicon || initialSettings.favicon,
                         colors: {
-                            primary: fetchedSettings.primary_color || initialSettings.colors.primary,
-                            secondary: fetchedSettings.secondary_color || initialSettings.colors.secondary,
-                            accent: fetchedSettings.accent_color || initialSettings.colors.accent
+                            primary: s.primary_color || initialSettings.colors.primary,
+                            secondary: s.secondary_color || initialSettings.colors.secondary,
+                            accent: s.accent_color || initialSettings.colors.accent,
+                            background: s.background_color || initialSettings.colors.background
                         },
-                        typography: fetchedSettings.typography || initialSettings.typography,
-                        showLegal: fetchedSettings.show_legal !== undefined ? fetchedSettings.show_legal : initialSettings.showLegal,
+                        typography: s.typography || initialSettings.typography,
+                        showLegal: s.show_legal !== undefined ? s.show_legal : initialSettings.showLegal,
                         contact: {
                             ...initialSettings.contact,
-                            phone: fetchedSettings.phone || initialSettings.contact.phone,
-                            email: fetchedSettings.email || initialSettings.contact.email,
-                            hours: fetchedSettings.hours || initialSettings.contact.hours,
-                            address: fetchedSettings.address || initialSettings.contact.address,
+                            phone: s.phone || initialSettings.contact.phone,
+                            email: s.email || initialSettings.contact.email,
+                            hours: s.hours || initialSettings.contact.hours,
+                            address: s.address || initialSettings.contact.address,
+                            googleMapLink: s.google_map_link || initialSettings.contact.googleMapLink,
+                            socials: {
+                                instagram: s.instagram || initialSettings.contact.socials.instagram,
+                                facebook: s.facebook || initialSettings.contact.socials.facebook,
+                                twitter: s.twitter || initialSettings.contact.socials.twitter,
+                                linkedin: s.linkedin || initialSettings.contact.socials.linkedin,
+                            }
                         },
-                        viewCount: Number(fetchedSettings.view_count || 0),
-                        documents: Array.isArray(fetchedSettings.documents) ? fetchedSettings.documents : []
+                        viewCount: Number(s.view_count || 0),
+                        seo: {
+                            ...initialSettings.seo,
+                            ...(s.seo || {})
+                        },
+                        documents: Array.isArray(s.documents) ? s.documents : [],
+                        landingImages: s.landing_images || initialSettings.landingImages,
+                        dashboardImages: s.dashboard_images || initialSettings.dashboardImages,
+                        // Intelligent Merge for Payment Gateways
+                        paymentGateways: (() => {
+                            const dbGws = Array.isArray(s.payment_gateways) ? s.payment_gateways : [];
+                            const coreGws = initialSettings.paymentGateways;
+                            const merged = coreGws.map(core => {
+                                const match = dbGws.find(g => g.id === core.id);
+                                return match ? { ...core, ...match } : core;
+                            });
+                            const custom = dbGws.filter(g => !coreGws.some(c => c.id === g.id));
+                            return [...merged, ...custom];
+                        })(),
+                        paymentsEnabled: s.payments_enabled !== false
                     });
                 }
                 if (fetchedServices) setServices(fetchedServices);
@@ -162,33 +241,56 @@ export const DataProvider = ({ children }) => {
                     setPlans(fetchedPlans.map(p => ({ ...p, activeUsers: p.active_users || 0 })));
                 }
 
-                // Map Profiles to Users (display_name -> name)
+                // Map Profiles to Users (Deep attribute hydration)
                 if (fetchedUsers) {
                     setUsers(fetchedUsers.map(u => ({
                         ...u,
                         name: u.display_name || 'Anonymous',
-                        savedVehicles: u.saved_vehicles || [],
-                        savedAddresses: u.saved_addresses || [],
-                        subscriptionPlan: u.subscription_plan || 'None',
+                        savedVehicles: Array.isArray(u.saved_vehicles) ? u.saved_vehicles : [],
+                        savedAddresses: Array.isArray(u.saved_addresses) ? u.saved_addresses : [],
+                        subscriptionPlan: u.plan || u.subscription_plan || 'None',
+                        plan: u.plan || u.subscription_plan || 'None',
+                        joined: u.created_at ? new Date(u.created_at).toISOString().split('T')[0] : 'Unknown',
                         requests: Array.isArray(u.requests) ? u.requests : []
                     })));
                 }
 
-                // Map Bookings (full_name -> fullName)
+                // Map Bookings (database snake_case to UI camelCase)
                 if (fetchedBookings) {
-                    setBookings(fetchedBookings.map(b => ({ ...b, fullName: b.full_name || 'Customer' })));
-                }
-
-                // Map Transactions (user_name -> user)
-                if (fetchedTransactions) {
-                    setTransactions(fetchedTransactions.map(t => ({
-                        ...t,
-                        user: t.user_name || 'Guest',
-                        amount: Number(t.amount || 0)
+                    setBookings(fetchedBookings.map(b => ({
+                        ...b,
+                        fullName: b.full_name || 'Customer',
+                        customerId: b.customer_id,
+                        vehicleType: b.vehicle_type
                     })));
                 }
 
-                if (fetchedConvos) setConversations(fetchedConvos);
+                // Map Transactions (database snake_case to UI camelCase)
+                if (fetchedTransactions) {
+                    const mappedTrx = fetchedTransactions.map(t => ({
+                        ...t,
+                        user: t.user_name || t.user || 'Guest',
+                        amount: Number(t.amount || 0),
+                        paymentMethod: t.payment_method || 'N/A',
+                        referenceNo: t.reference_no || 'N/A',
+                        itemId: String(t.item_id || ''),
+                        referenceId: t.reference_id || null,
+                        category: t.category || 'Service',
+                        invoiceId: t.invoice_id || null
+                    }));
+                    // Sort strictly by timestamp desc to ensure recent at top
+                    setTransactions(mappedTrx.sort((a, b) => new Date(b.timestamp || b.created_at || b.date) - new Date(a.timestamp || a.created_at || a.date)));
+                }
+
+                if (fetchedConvos) {
+                    setConversations(fetchedConvos.map(c => ({
+                        ...c,
+                        customerId: c.customer_id,
+                        customerName: c.customer_name,
+                        lastMessage: c.last_message,
+                        lastMessageTime: c.last_message_time
+                    })));
+                }
                 if (fetchedMessages) {
                     setMessages(fetchedMessages.map(m => ({ ...m, conversationId: m.conversation_id || '' })));
                 }
@@ -199,7 +301,8 @@ export const DataProvider = ({ children }) => {
                     setUserNotifications(mappedNotifs.filter(n => n.userId));
                 }
 
-                if (fetchedBroadcasts) setBroadcasts(fetchedBroadcasts);
+                // Explicitly set broadcasts, with fallback to empty array to ensure it's never undefined
+                setBroadcasts(Array.isArray(fetchedBroadcasts) ? fetchedBroadcasts : []);
                 if (fetchedAnalytics) setAnalytics(fetchedAnalytics);
                 if (fetchedExports) setDataExports(fetchedExports);
 
@@ -214,7 +317,105 @@ export const DataProvider = ({ children }) => {
         fetchAllData();
     }, []);
 
-    // --- Demo Data Auto-Purge ---
+    // --- Real-time Subscriptions for Chat ---
+    useEffect(() => {
+        // Subscribe to new messages in real-time
+        const messagesChannel = supabase
+            .channel('messages-realtime')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
+                console.log('[CHAT] Real-time message received:', payload);
+                const newMsg = { ...payload.new, conversationId: payload.new.conversation_id };
+                setMessages(prev => {
+                    // Avoid duplicates
+                    if (prev.some(m => m.id === newMsg.id)) return prev;
+                    return [...prev, newMsg];
+                });
+            })
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, (payload) => {
+                const updatedMsg = { ...payload.new, conversationId: payload.new.conversation_id };
+                setMessages(prev => prev.map(m => m.id === updatedMsg.id ? updatedMsg : m));
+            })
+            .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'messages' }, (payload) => {
+                setMessages(prev => prev.filter(m => m.id !== payload.old.id));
+            })
+            .subscribe();
+
+        // Subscribe to conversation updates
+        const conversationsChannel = supabase
+            .channel('conversations-realtime')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'conversations' }, (payload) => {
+                console.log('[CHAT] Real-time conversation received:', payload);
+                const newConvo = {
+                    ...payload.new,
+                    customerId: payload.new.customer_id,
+                    customerName: payload.new.customer_name,
+                    lastMessage: payload.new.last_message,
+                    lastMessageTime: payload.new.last_message_time
+                };
+                setConversations(prev => {
+                    if (prev.some(c => c.id === newConvo.id)) return prev;
+                    return [newConvo, ...prev];
+                });
+            })
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'conversations' }, (payload) => {
+                const updatedConvo = {
+                    ...payload.new,
+                    customerId: payload.new.customer_id,
+                    customerName: payload.new.customer_name,
+                    lastMessage: payload.new.last_message,
+                    lastMessageTime: payload.new.last_message_time
+                };
+                setConversations(prev => prev.map(c => c.id === updatedConvo.id ? updatedConvo : c));
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(messagesChannel);
+            supabase.removeChannel(conversationsChannel);
+        };
+    }, []);
+
+    // --- High-Frequency Polling Fallback ('Load every second') ---
+    useEffect(() => {
+        const interval = setInterval(() => {
+            const pollData = async () => {
+                const { data: pollMsgs } = await supabase.from('messages').select('*');
+                const { data: pollConvos } = await supabase.from('conversations').select('*');
+
+                if (pollMsgs) {
+                    const mappedMsgs = pollMsgs.map(m => ({ ...m, conversationId: m.conversation_id || '' }));
+                    setMessages(prev => {
+                        // Sort by ID to ensure consistent comparison
+                        const sortedPrev = [...prev].sort((a, b) => a.id - b.id);
+                        const sortedNew = [...mappedMsgs].sort((a, b) => a.id - b.id);
+                        if (JSON.stringify(sortedPrev) === JSON.stringify(sortedNew)) return prev;
+                        return mappedMsgs;
+                    });
+                }
+                if (pollConvos) {
+                    const mappedConvos = pollConvos.map(c => ({
+                        ...c,
+                        customerId: c.customer_id,
+                        customerName: c.customer_name,
+                        lastMessage: c.last_message,
+                        lastMessageTime: c.last_message_time
+                    }));
+                    setConversations(prev => {
+                        const sortedPrev = [...prev].sort((a, b) => String(a.id).localeCompare(String(b.id)));
+                        const sortedNew = [...mappedConvos].sort((a, b) => String(a.id).localeCompare(String(b.id)));
+                        if (JSON.stringify(sortedPrev) === JSON.stringify(sortedNew)) return prev;
+                        return mappedConvos;
+                    });
+                }
+            };
+            pollData();
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, []);
+
+    // --- Demo Data Auto-Purge Deactivated for Production ---
+    /*
     useEffect(() => {
         if (!loading) {
             const demoNames = ['Alex Johnson', 'Sarah Miller'];
@@ -226,6 +427,7 @@ export const DataProvider = ({ children }) => {
             }
         }
     }, [users, loading]);
+    */
 
     const saveToSupabase = async (key, value) => {
         try {
@@ -239,33 +441,67 @@ export const DataProvider = ({ children }) => {
 
     // --- Data Actions ---
 
-    const updateSettings = async (newSettings) => {
-        setSettings(newSettings);
+    const updateSettings = (newSettingsOrFn) => {
+        // Use a local variable to capture calculated next state for the async branch
+        let next;
+
+        setSettings(prev => {
+            next = typeof newSettingsOrFn === 'function' ? newSettingsOrFn(prev) : { ...prev, ...newSettingsOrFn };
+
+            // Optimistic Local Sync
+            localStorage.setItem('preview_settings', JSON.stringify(next));
+
+            // Trigger async persistence without blocking the UI thread
+            persistSettingsToCloud(next);
+
+            return next;
+        });
+    };
+
+    const persistSettingsToCloud = async (next) => {
         try {
-            await supabase.from('site_settings').upsert({
-                id: 1,
-                site_name: newSettings.siteName,
-                tagline: newSettings.tagline,
-                description: newSettings.description,
-                legal_text: newSettings.legalText,
-                logo: newSettings.logo,
-                primary_color: newSettings.colors.primary,
-                secondary_color: newSettings.colors.secondary,
-                accent_color: newSettings.colors.accent,
-                typography: newSettings.typography,
-                show_legal: newSettings.showLegal,
-                phone: newSettings.contact.phone,
-                email: newSettings.contact.email,
-                hours: newSettings.contact.hours,
-                address: newSettings.contact.address,
-                instagram: newSettings.contact.socials.instagram,
-                facebook: newSettings.contact.socials.facebook,
-                twitter: newSettings.contact.socials.twitter,
-                linkedin: newSettings.contact.socials.linkedin,
-                google_map_link: newSettings.contact.googleMapLink,
-                view_count: newSettings.viewCount
-            });
-        } catch (err) { console.error("Settings Update Error:", err); }
+            const payload = {
+                id: next.id || 1,
+                site_name: next.siteName,
+                tagline: next.tagline,
+                description: next.description,
+                legal_text: next.legalText,
+                logo: next.logo,
+                favicon: next.favicon,
+                primary_color: next.colors?.primary,
+                secondary_color: next.colors?.secondary,
+                accent_color: next.colors?.accent,
+                background_color: next.colors?.background,
+                typography: next.typography,
+                show_legal: next.showLegal,
+                phone: next.contact?.phone,
+                email: next.contact?.email,
+                hours: next.contact?.hours,
+                address: next.contact?.address,
+                instagram: next.contact?.socials?.instagram,
+                facebook: next.contact?.socials?.facebook,
+                twitter: next.contact?.socials?.twitter,
+                linkedin: next.contact?.socials?.linkedin,
+                google_map_link: next.contact?.googleMapLink,
+                view_count: next.viewCount || 0,
+                seo: next.seo,
+                documents: next.documents,
+                landing_images: next.landingImages || next.landing_images,
+                dashboard_images: next.dashboardImages || next.dashboard_images,
+                payment_gateways: next.paymentGateways || next.payment_gateways,
+                payments_enabled: next.paymentsEnabled
+            };
+
+            const { error } = await supabase.from('site_settings').upsert(payload, { onConflict: 'id' });
+
+            if (error) {
+                console.error("[SYNCHRONIZATION ERROR]:", error.message);
+                throw error;
+            }
+            console.log("[LEDGER SYNC]: Configuration persisted to cloud.");
+        } catch (err) {
+            console.error("Database Persistence Failure:", err);
+        }
     };
 
     const incrementViewCount = async () => {
@@ -279,32 +515,82 @@ export const DataProvider = ({ children }) => {
     // Services
     const addService = async (service) => {
         try {
-            const { data } = await supabase.from('services').insert(service).select().single();
-            if (data) setServices([...services, data]);
-        } catch (err) { console.error("Add Service Error:", err); }
+            // Clean payload
+            const payload = { ...service };
+            const { data, error } = await supabase.from('services').insert(payload).select().single();
+            if (error) throw error;
+            if (data) setServices(prev => [...prev, data]);
+            return data;
+        } catch (err) {
+            console.error("Database Error [Add Service]:", err.message);
+            throw err;
+        }
     };
     const updateService = async (updated) => {
         try {
-            await supabase.from('services').update(updated).eq('id', updated.id);
-            setServices(services.map(s => s.id === updated.id ? updated : s));
-        } catch (err) { console.error("Update Service Error:", err); }
+            const { id, ...payload } = updated;
+            const { error } = await supabase.from('services').update(payload).eq('id', id);
+            if (error) throw error;
+
+            setServices(prev => prev.map(s => String(s.id) === String(id) ? updated : s));
+        } catch (err) {
+            console.error("Database Error [Update Service]:", err.message);
+            throw err;
+        }
     };
     const deleteService = async (id) => {
         try {
-            await supabase.from('services').delete().eq('id', id);
-            setServices(services.filter(s => s.id !== id));
-        } catch (err) { console.error("Delete Service Error:", err); }
+            const { error } = await supabase.from('services').delete().eq('id', id);
+            if (error) throw error;
+            setServices(prev => prev.filter(s => String(s.id) !== String(id)));
+        } catch (err) {
+            console.error("Database Error [Delete Service]:", err.message);
+            throw err;
+        }
     };
 
     // Plans
-    const updatePlans = async (newPlans) => {
-        setPlans(newPlans);
+    const addPlan = async (plan) => {
         try {
-            // Upsert each plan
-            for (const plan of newPlans) {
-                await supabase.from('plans').upsert(plan);
-            }
-        } catch (err) { console.error("Update Plans Error:", err); }
+            const { activeUsers, active_users, ...payload } = plan;
+            const insertData = {
+                ...payload,
+                active_users: activeUsers || active_users || 0
+            };
+            const { data, error } = await supabase.from('plans').insert(insertData).select().single();
+            if (error) throw error;
+            if (data) setPlans(prev => [...prev, data]);
+            return data;
+        } catch (err) {
+            console.error("Database Error [Add Plan]:", err.message);
+            throw err;
+        }
+    };
+    const updatePlan = async (updated) => {
+        try {
+            const { id, activeUsers, active_users, ...payload } = updated;
+            // Map back to snake_case or omit derived fields if database doesn't have them
+            const updateData = {
+                ...payload,
+                active_users: activeUsers || active_users || 0
+            };
+            const { error } = await supabase.from('plans').update(updateData).eq('id', id);
+            if (error) throw error;
+            setPlans(prev => prev.map(p => String(p.id) === String(id) ? updated : p));
+        } catch (err) {
+            console.error("Database Error [Update Plan]:", err.message);
+            throw err;
+        }
+    };
+    const deletePlan = async (id) => {
+        try {
+            const { error } = await supabase.from('plans').delete().eq('id', id);
+            if (error) throw error;
+            setPlans(prev => prev.filter(p => String(p.id) !== String(id)));
+        } catch (err) {
+            console.error("Database Error [Delete Plan]:", err.message);
+            throw err;
+        }
     };
 
     // Bookings
@@ -323,11 +609,11 @@ export const DataProvider = ({ children }) => {
                 time: newBooking.time,
                 status: newBooking.status,
                 location: newBooking.location,
-                vehicle_type: newBooking.vehicleType,
-                price: newBooking.price
+                vehicle_type: newBooking.vehicleType || null,
+                price: String(newBooking.price)
             };
             await supabase.from('bookings').insert(dbBooking);
-            setBookings([newBooking, ...bookings]);
+            setBookings(prev => [newBooking, ...prev]);
 
             // Notification
             addAdminNotification({
@@ -338,80 +624,222 @@ export const DataProvider = ({ children }) => {
         } catch (err) { console.error("Add Booking Error:", err); }
     };
     const updateBooking = async (updated) => {
+        // Optimistic Update
+        const previousBookings = [...bookings];
+        setBookings(prev => prev.map(b => String(b.id) === String(updated.id) ? { ...b, ...updated } : b));
+
         try {
-            const dbUpdated = {
-                id: updated.id,
-                customer_id: updated.customerId || null,
-                full_name: updated.fullName,
-                email: updated.email,
-                phone: updated.phone,
-                service: updated.service,
-                date: updated.date,
-                time: updated.time,
-                status: updated.status,
-                location: updated.location,
-                vehicle_type: updated.vehicleType,
-                price: updated.price
+            // Map to database schema (snake_case)
+            const dbPayload = {};
+            if (updated.status) dbPayload.status = updated.status;
+
+            // Handle rejection_reason (allow clearing it)
+            if (updated.rejection_reason !== undefined) {
+                dbPayload.rejection_reason = updated.rejection_reason;
+            }
+
+            // Map common business fields if they exist in the payload
+            const fieldMap = {
+                fullName: 'full_name',
+                full_name: 'full_name',
+                email: 'email',
+                phone: 'phone',
+                service: 'service',
+                date: 'date',
+                time: 'time',
+                location: 'location',
+                customerId: 'customer_id',
+                customer_id: 'customer_id',
+                vehicleType: 'vehicle_type',
+                vehicle_type: 'vehicle_type'
             };
-            await supabase.from('bookings').update(dbUpdated).eq('id', updated.id);
-            setBookings(bookings.map(b => b.id === updated.id ? updated : b));
-        } catch (err) { console.error("Update Booking Error:", err); }
+
+            Object.keys(fieldMap).forEach(key => {
+                if (updated[key] !== undefined) {
+                    dbPayload[fieldMap[key]] = updated[key];
+                }
+            });
+
+            // Ensure price is a string if present
+            if (updated.price !== undefined) {
+                dbPayload.price = String(updated.price);
+            }
+
+            const { error } = await supabase.from('bookings').update(dbPayload).eq('id', updated.id);
+            if (error) {
+                console.error("Database Update Error:", error);
+                throw error;
+            }
+
+            // Send notification to user if status changed
+            if (updated.status === 'Approved' || updated.status === 'Rejected') {
+                const userId = updated.customerId || updated.customer_id;
+                if (userId) {
+                    sendUserNotification(userId, {
+                        type: updated.status === 'Approved' ? 'success' : 'warning',
+                        title: `Booking ${updated.status}`,
+                        message: updated.status === 'Approved'
+                            ? `Your wash for ${updated.service} on ${updated.date} has been confirmed.`
+                            : `Your wash request was declined. Reason: ${updated.rejection_reason || 'No specific reason provided.'}`
+                    });
+                }
+            }
+        } catch (err) {
+            console.error("Update Booking Protocol Failure:", err);
+            // Revert on failure
+            setBookings(previousBookings);
+
+            // If it's a fetch error, it might be transient or network related
+            if (err.message === 'Failed to fetch') {
+                throw new Error("Network connection lost. Please check your internet or database status.");
+            }
+            throw err;
+        }
     };
     const deleteBooking = async (id) => {
         try {
             await supabase.from('bookings').delete().eq('id', id);
-            setBookings(bookings.filter(b => b.id !== id));
+            setBookings(prev => prev.filter(b => String(b.id) !== String(id)));
         } catch (err) { console.error("Delete Booking Error:", err); }
     };
 
     // Transactions
     const addTransaction = async (trx) => {
-        const id = `TRX-${Date.now()}`;
-        const newTrx = { ...trx, id };
+        // Prepare payload for Supabase (snake_case)
+        const dbTrx = {
+            id: trx.id || `TRX-${Date.now()}`,
+            user_name: trx.user || trx.userName || 'Guest',
+            user_id: trx.userId || null,
+            amount: Number(trx.amount),
+            category: trx.category || 'Service',
+            item_id: trx.itemId || null,
+            item_name: trx.item || trx.itemName || null,
+            payment_method: trx.paymentMethod || 'Auth Transfer',
+            reference_no: trx.referenceNo || 'N/A',
+            status: trx.status || 'Completed',
+            date: trx.date || new Date().toISOString().split('T')[0],
+            timestamp: trx.timestamp || new Date().toISOString()
+        };
+
         try {
-            await supabase.from('transactions').insert(newTrx);
-            setTransactions([newTrx, ...transactions]);
-        } catch (err) { console.error("Add Transaction Error:", err); }
+            const { data, error } = await supabase.from('transactions').insert(dbTrx).select().single();
+            if (error) throw error;
+
+            if (data) {
+                const mappedTrx = {
+                    ...data,
+                    user: data.user_name,
+                    userId: data.user_id,
+                    paymentMethod: data.payment_method,
+                    referenceNo: data.reference_no,
+                    itemId: data.item_id,
+                    item: data.item_name
+                };
+                setTransactions(prev => [mappedTrx, ...prev]);
+
+                // Automatically notify admin if this is a pending user submission
+                if (mappedTrx.status === 'Pending') {
+                    addAdminNotification({
+                        type: 'payment',
+                        title: 'New Settlement Received',
+                        message: `${mappedTrx.user} submitted a payment for USD ${mappedTrx.amount}. Reference: ${mappedTrx.referenceNo}`,
+                        data: { transactionId: mappedTrx.id }
+                    });
+                }
+                console.log("[FINANCE] Ledger record successfully persisted.");
+            }
+        } catch (err) {
+            console.error("Critical Transaction Injection Error:", err);
+            // Fallback for UI responsiveness
+            setTransactions(prev => [{ ...dbTrx, user: dbTrx.user_name, userId: dbTrx.user_id }, ...prev]);
+        }
     };
+
     const updateTransaction = async (updated) => {
+        const payload = {
+            user_name: updated.user || updated.userName,
+            amount: Number(updated.amount),
+            category: updated.category,
+            item_id: String(updated.itemId || ''),
+            payment_method: updated.paymentMethod,
+            reference_no: updated.referenceNo,
+            status: updated.status,
+            date: updated.date,
+            invoice_id: updated.invoiceId
+        };
         try {
-            await supabase.from('transactions').update(updated).eq('id', updated.id);
-            setTransactions(transactions.map(t => t.id === updated.id ? updated : t));
+            const { error } = await supabase.from('transactions').update(payload).eq('id', updated.id);
+            if (error) throw error;
+            setTransactions(prev => prev.map(t => String(t.id) === String(updated.id) ? { ...updated, amount: Number(updated.amount) } : t));
         } catch (err) { console.error("Update Transaction Error:", err); }
     };
     const deleteTransaction = async (id) => {
         try {
             await supabase.from('transactions').delete().eq('id', id);
-            setTransactions(transactions.filter(t => t.id !== id));
+            setTransactions(prev => prev.filter(t => String(t.id) !== String(id)));
         } catch (err) { console.error("Delete Transaction Error:", err); }
     };
 
     // Users (Profiles)
     const addUser = async (newUser) => {
-        // usually handled by Supabase Auth, but for manual addition to profiles:
+        // Manual addition often lacks a valid UUID. We generate one if needed for the profiles PK.
+        const id = newUser.id.includes('-') && newUser.id.length > 20 ? newUser.id : crypto.randomUUID();
+
+        const payload = {
+            id,
+            email: newUser.email,
+            display_name: newUser.name,
+            role: newUser.role || 'user',
+            plan: newUser.plan || 'None',
+            phone: newUser.phone || '',
+            status: newUser.status || 'Active',
+            joined_at: new Date().toISOString()
+        };
+
         try {
-            await supabase.from('profiles').insert({ ...newUser, display_name: newUser.name });
-            setUsers([...users, newUser]);
-        } catch (err) { console.error("Add User Error:", err); }
+            const { data, error } = await supabase.from('profiles').insert(payload).select().single();
+            if (error) throw error;
+
+            const mappedUser = {
+                ...newUser,
+                id: id,
+                name: newUser.name,
+                subscriptionPlan: newUser.plan,
+                joined: new Date().toISOString().split('T')[0]
+            };
+            setUsers(prev => [...prev, mappedUser]);
+            console.log("Member Registry Entry Initialized.");
+        } catch (err) {
+            console.error("Add User Registry Error:", err);
+            // Fallback
+            setUsers(prev => [...prev, { ...newUser, id }]);
+        }
     };
     const deleteUser = async (id) => {
         try {
             await supabase.from('profiles').delete().eq('id', id);
-            setUsers(users.filter(u => u.id !== id));
+            setUsers(prev => prev.filter(u => String(u.id) !== String(id)));
         } catch (err) { console.error("Delete User Error:", err); }
     };
+    const updateUserStatus = async (id, status) => {
+        try {
+            await supabase.from('profiles').update({ status }).eq('id', id);
+            setUsers(prev => prev.map(u => String(u.id) === String(id) ? { ...u, status } : u));
+        } catch (err) { console.error("Update User Status Error:", err); }
+    };
+
     const updateUsers = async (newUsers) => {
         setUsers(newUsers);
         try {
             for (const u of newUsers) {
-                await supabase.from('profiles').upsert({
+                await supabase.from("profiles").upsert({
                     id: u.id,
                     display_name: u.name,
                     phone: u.phone,
                     role: u.role,
-                    subscription_plan: u.subscriptionPlan,
+                    plan: u.subscriptionPlan || u.plan,
                     saved_vehicles: u.savedVehicles || [],
-                    saved_addresses: u.savedAddresses || []
+                    saved_addresses: u.saved_addresses || []
                 });
             }
         } catch (err) { console.error("Update Users Error:", err); }
@@ -419,9 +847,8 @@ export const DataProvider = ({ children }) => {
 
     // Messages & Conversations
     const sendMessage = async (msg) => {
-        const id = `msg-${Date.now()}`;
+        // Note: Database auto-generates BIGINT id, do not include it
         const dbMsg = {
-            id,
             conversation_id: msg.conversationId,
             sender: msg.sender,
             text: msg.text,
@@ -430,27 +857,40 @@ export const DataProvider = ({ children }) => {
         };
 
         try {
-            await supabase.from('messages').insert(dbMsg);
-            setMessages([...messages, { ...dbMsg, conversationId: msg.conversationId }]);
+            const { data, error: msgError } = await supabase.from('messages').insert(dbMsg).select().single();
+            if (msgError) {
+                console.error("[CHAT] Message insert failed:", msgError);
+                return false;
+            }
 
-            // Update conversation last message
-            await supabase.from('conversations').update({
-                last_message: msg.text,
-                last_message_time: msg.timestamp
-            }).eq('id', msg.conversationId);
+            if (data) {
+                const mappedMsg = { ...data, conversationId: data.conversation_id };
+                setMessages(prev => [...prev, mappedMsg]);
 
-            setConversations(conversations.map(c =>
-                c.id === msg.conversationId
-                    ? { ...c, last_message: msg.text, last_message_time: msg.timestamp }
-                    : c
-            ));
-        } catch (err) { console.error("Send Message Error:", err); }
+                // Update conversation last message
+                await supabase.from('conversations').update({
+                    last_message: msg.text,
+                    last_message_time: msg.timestamp
+                }).eq('id', msg.conversationId);
+
+                setConversations(prev => prev.map(c =>
+                    c.id === msg.conversationId
+                        ? { ...c, last_message: msg.text, last_message_time: msg.timestamp, lastMessage: msg.text, lastMessageTime: msg.timestamp }
+                        : c
+                ));
+                return true;
+            }
+            return false;
+        } catch (err) {
+            console.error("[CHAT] Send Message Error:", err);
+            return false;
+        }
     };
 
     const markAsRead = async (conversationId) => {
         try {
             await supabase.from('messages').update({ read: true }).eq('conversation_id', conversationId);
-            setMessages(messages.map(m =>
+            setMessages(prev => prev.map(m =>
                 m.conversationId === conversationId ? { ...m, read: true } : m
             ));
         } catch (err) { console.error("Mark Read Error:", err); }
@@ -462,20 +902,44 @@ export const DataProvider = ({ children }) => {
             id,
             customer_id: convo.customerId,
             customer_name: convo.customerName,
-            last_message: convo.lastMessage,
-            last_message_time: convo.lastMessageTime
+            last_message: convo.lastMessage || '',
+            last_message_time: convo.lastMessageTime || new Date().toISOString()
         };
         try {
-            await supabase.from('conversations').insert(dbConvo);
-            setConversations([dbConvo, ...conversations]);
-            return dbConvo;
-        } catch (err) { console.error("Add Conversation Error:", err); return null; }
+            const { error } = await supabase.from('conversations').insert(dbConvo);
+            if (error) {
+                console.error("[CHAT] Conversation insert failed:", error);
+                return null;
+            }
+
+            const mappedConvo = {
+                ...dbConvo,
+                customerId: convo.customerId,
+                customerName: convo.customerName,
+                lastMessage: convo.lastMessage,
+                lastMessageTime: convo.lastMessageTime
+            };
+            setConversations(prev => [mappedConvo, ...prev]);
+            return mappedConvo;
+        } catch (err) {
+            console.error("[CHAT] Add Conversation Error:", err);
+            return null;
+        }
     };
 
     const updateUserSubscription = async (userId, planName) => {
         try {
-            await supabase.from('profiles').update({ subscription_plan: planName }).eq('id', userId);
-            setUsers(users.map(u => u.id === userId ? { ...u, subscriptionPlan: planName } : u));
+            const { error } = await supabase
+                .from('profiles')
+                .update({
+                    plan: planName,
+                    subscription_plan: planName
+                })
+                .eq('id', userId);
+
+            if (error) throw error;
+
+            setUsers(prev => prev.map(u => String(u.id) === String(userId) ? { ...u, subscriptionPlan: planName, plan: planName } : u));
             return { success: true };
         } catch (err) {
             console.error("Update Subscription Error:", err);
@@ -499,14 +963,22 @@ export const DataProvider = ({ children }) => {
     const markNotificationRead = async (id) => {
         try {
             await supabase.from('notifications').update({ read: true }).eq('id', id);
-            setAdminNotifications(adminNotifications.map(n =>
-                n.id === id ? { ...n, read: true } : n
-            ));
+            setAdminNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+            setUserNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
         } catch (err) { console.error("Mark Notif Read Error:", err); }
+    };
+
+    const deleteNotification = async (id) => {
+        try {
+            await supabase.from('notifications').delete().eq('id', id);
+            setAdminNotifications(prev => prev.filter(n => n.id !== id));
+            setUserNotifications(prev => prev.filter(n => n.id !== id));
+        } catch (err) { console.error("Delete Notif Error:", err); }
     };
 
     const clearAllNotifications = async () => {
         try {
+            // Delete notifications where user_id is null (Admin notifications)
             await supabase.from('notifications').delete().is('user_id', null);
             setAdminNotifications([]);
         } catch (err) { console.error("Clear Notifs Error:", err); }
@@ -522,14 +994,16 @@ export const DataProvider = ({ children }) => {
         };
         try {
             const { data } = await supabase.from('notifications').insert(newNotif).select().single();
-            if (data) setUserNotifications([data, ...userNotifications]);
+            if (data) setUserNotifications(prev => [data, ...prev]);
         } catch (err) { console.error("Send User Notif Error:", err); }
     };
 
     const clearUserNotifications = async () => {
         try {
-            await supabase.from('notifications').delete().not('user_id', 'is', null);
-            setUserNotifications([]);
+            const userId = session?.user?.id;
+            if (!userId) return;
+            await supabase.from('notifications').delete().eq('user_id', userId);
+            setUserNotifications(prev => prev.filter(n => n.user_id !== userId));
         } catch (err) { console.error("Clear User Notifs Error:", err); }
     };
 
@@ -550,47 +1024,89 @@ export const DataProvider = ({ children }) => {
             setUserNotifications([]);
             setMessages([]);
             setConversations([]);
+            setBroadcasts([]); // Keep registry clean on purge
         } catch (err) { console.error("Purge Error:", err); }
     };
 
     // --- New Features Actions ---
     const addBroadcast = async (broadcast) => {
         try {
-            const { data } = await supabase.from('broadcasts').insert(broadcast).select().single();
-            if (data) setBroadcasts([data, ...broadcasts]);
-        } catch (err) { console.error("Add Broadcast Error:", err); }
+            const payload = {
+                ...broadcast,
+                timestamp: new Date().toISOString()
+            };
+
+            const { data, error } = await supabase.from('broadcasts').insert(payload).select().single();
+            if (error) throw error;
+
+            if (data) {
+                setBroadcasts(prev => [data, ...prev]);
+                return true;
+            }
+            return false;
+        } catch (err) {
+            console.error("Critical Registry Sync Error:", err);
+            return false;
+        }
+    };
+
+    const deleteBroadcast = async (id) => {
+        try {
+            setBroadcasts(prev => prev.filter(b => b.id !== id));
+            const { error } = await supabase.from('broadcasts').delete().eq('id', id);
+            return !error;
+        } catch (err) { console.error("Delete Broadcast Error:", err); return false; }
+    };
+
+    const editMessage = async (messageId, newText) => {
+        try {
+            const timestamp = new Date().toISOString();
+            setMessages(prev => prev.map(m => m.id === messageId ? { ...m, text: newText, edited: true, edited_at: timestamp } : m));
+            const { error } = await supabase.from('messages').update({ text: newText, edited: true, edited_at: timestamp }).eq('id', messageId);
+            return !error;
+        } catch (err) { console.error("Edit Message Error:", err); return false; }
+    };
+
+    const deleteMessage = async (messageId) => {
+        try {
+            const timestamp = new Date().toISOString();
+            setMessages(prev => prev.map(m => m.id === messageId ? { ...m, deleted: true, deleted_at: timestamp } : m));
+            const { error } = await supabase.from('messages').update({ deleted: true, deleted_at: timestamp }).eq('id', messageId);
+            return !error;
+        } catch (err) { console.error("Delete Message Error:", err); return false; }
     };
 
     const logAnalyticsEvent = async (event) => {
         try { // Fire and forget mostly, but we update state for live feel
             // only log if session exists or anonymous tracking enabled
             const { data } = await supabase.from('analytics_events').insert(event).select().single();
-            if (data) setAnalytics([data, ...analytics]);
+            if (data) setAnalytics(prev => [data, ...prev]);
         } catch (err) { console.error("Log Analytics Error:", err); }
     };
 
     const logDataExport = async (exportLog) => {
         try {
             const { data } = await supabase.from('data_exports').insert(exportLog).select().single();
-            if (data) setDataExports([data, ...dataExports]);
+            if (data) setDataExports(prev => [data, ...prev]);
         } catch (err) { console.error("Log Export Error:", err); }
     };
 
     return (
         <DataContext.Provider value={{
-            settings, updateSettings, incrementViewCount,
+            settings, updateSettings, liveUpdateSettings, incrementViewCount,
             services, addService, updateService, deleteService,
-            plans, updatePlans,
+            plans, addPlan, updatePlan, deletePlan,
             transactions, addTransaction, updateTransaction, deleteTransaction,
             bookings, addBooking, updateBooking, deleteBooking,
             users, addUser, deleteUser, updateUsers,
             conversations, messages, sendMessage, markAsRead, addConversation,
             updateUserSubscription,
-            adminNotifications, addAdminNotification, markNotificationRead, clearAllNotifications,
+            adminNotifications, addAdminNotification, markNotificationRead, deleteNotification, clearAllNotifications,
             userNotifications, sendUserNotification, clearUserNotifications,
-            broadcasts, addBroadcast,
+            broadcasts, addBroadcast, deleteBroadcast,
             analytics, logAnalyticsEvent,
             dataExports, logDataExport,
+            editMessage, deleteMessage,
             purgeSystemData,
             session,
             loading

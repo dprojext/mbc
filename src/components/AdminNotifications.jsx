@@ -138,70 +138,86 @@ const AdminNotifications = () => {
                                     <p>You're all caught up!</p>
                                 </div>
                             ) : (
-                                adminNotifications.map((notif, idx) => (
-                                    <div
-                                        key={notif.id || idx}
-                                        onClick={() => {
-                                            markNotificationRead(notif.id);
-                                            setSelectedNotif(notif);
-                                        }}
-                                        style={{
-                                            padding: '1rem 1.5rem',
-                                            borderBottom: '1px solid #1a1a1a',
-                                            display: 'flex',
-                                            gap: '1rem',
-                                            cursor: 'pointer',
-                                            background: notif.read ? 'transparent' : 'rgba(var(--color-gold-rgb), 0.03)',
-                                            transition: '0.2s'
-                                        }}
-                                    >
-                                        <div style={{
-                                            width: '40px',
-                                            height: '40px',
-                                            borderRadius: '10px',
-                                            background: `${getColor(notif.type)}15`,
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            color: getColor(notif.type),
-                                            flexShrink: 0
-                                        }}>
-                                            {getIcon(notif.type)}
-                                        </div>
-                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                adminNotifications
+                                    .slice()
+                                    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+                                    .map((notif, idx) => (
+                                        <div
+                                            key={notif.id || idx}
+                                            onClick={() => {
+                                                markNotificationRead(notif.id);
+                                                setSelectedNotif(notif);
+                                            }}
+                                            style={{
+                                                padding: '1rem 1.5rem',
+                                                borderBottom: '1px solid #1a1a1a',
+                                                display: 'flex',
+                                                gap: '1rem',
+                                                cursor: 'pointer',
+                                                background: notif.read ? 'transparent' : 'rgba(var(--color-gold-rgb), 0.03)',
+                                                transition: '0.2s'
+                                            }}
+                                        >
                                             <div style={{
-                                                color: notif.read ? '#888' : '#fff',
-                                                fontSize: '0.9rem',
-                                                fontWeight: notif.read ? '400' : '500',
-                                                marginBottom: '0.3rem'
+                                                width: '40px',
+                                                height: '40px',
+                                                borderRadius: '10px',
+                                                background: `${getColor(notif.type)}15`,
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                color: getColor(notif.type),
+                                                flexShrink: 0
                                             }}>
-                                                {notif.title}
+                                                {getIcon(notif.type)}
                                             </div>
-                                            <div style={{
-                                                color: '#555',
-                                                fontSize: '0.8rem',
-                                                whiteSpace: 'nowrap',
-                                                overflow: 'hidden',
-                                                textOverflow: 'ellipsis'
-                                            }}>
-                                                {notif.message}
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{
+                                                    color: notif.read ? '#888' : '#fff',
+                                                    fontSize: '0.9rem',
+                                                    fontWeight: notif.read ? '400' : '600',
+                                                    marginBottom: '0.1rem'
+                                                }}>
+                                                    {notif.title}
+                                                </div>
+                                                <div style={{
+                                                    color: getColor(notif.type),
+                                                    fontSize: '0.6rem',
+                                                    fontWeight: '900',
+                                                    textTransform: 'uppercase',
+                                                    letterSpacing: '0.1em',
+                                                    marginBottom: '0.4rem',
+                                                    opacity: notif.read ? 0.5 : 1
+                                                }}>
+                                                    {notif.type || 'INFO'} LEVEL
+                                                </div>
+                                                <div style={{
+                                                    color: notif.read ? '#555' : '#888',
+                                                    fontSize: '0.75rem',
+                                                    lineHeight: '1.4',
+                                                    display: '-webkit-box',
+                                                    WebkitLineClamp: '2',
+                                                    WebkitBoxOrient: 'vertical',
+                                                    overflow: 'hidden'
+                                                }}>
+                                                    {notif.message}
+                                                </div>
+                                                <div style={{ color: '#444', fontSize: '0.7rem', marginTop: '0.4rem' }}>
+                                                    {formatTime(notif.timestamp)}
+                                                </div>
                                             </div>
-                                            <div style={{ color: '#444', fontSize: '0.7rem', marginTop: '0.4rem' }}>
-                                                {formatTime(notif.timestamp)}
-                                            </div>
+                                            {!notif.read && (
+                                                <div style={{
+                                                    width: '8px',
+                                                    height: '8px',
+                                                    borderRadius: '50%',
+                                                    background: 'var(--color-gold)',
+                                                    flexShrink: 0,
+                                                    marginTop: '6px'
+                                                }} />
+                                            )}
                                         </div>
-                                        {!notif.read && (
-                                            <div style={{
-                                                width: '8px',
-                                                height: '8px',
-                                                borderRadius: '50%',
-                                                background: 'var(--color-gold)',
-                                                flexShrink: 0,
-                                                marginTop: '6px'
-                                            }} />
-                                        )}
-                                    </div>
-                                ))
+                                    ))
                             )}
                         </div>
 
@@ -209,13 +225,14 @@ const AdminNotifications = () => {
                         <div style={{ borderTop: '1px solid #222' }}>
                             <Link
                                 to="/admin/broadcast"
+                                state={{ tab: 'Notifications' }}
                                 onClick={() => setIsOpen(false)}
                                 style={{
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     gap: '0.5rem',
-                                    padding: '1rem',
+                                    padding: '0.6rem 1rem',
                                     color: 'var(--color-gold)',
                                     fontSize: '0.85rem',
                                     fontWeight: '600',
@@ -289,6 +306,7 @@ const AdminNotifications = () => {
                             </span>
                             <Link
                                 to="/admin/broadcast"
+                                state={{ tab: 'Notifications', openNotifId: selectedNotif.id }}
                                 onClick={() => {
                                     setSelectedNotif(null);
                                     setIsOpen(false);

@@ -1,12 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useData } from '../../context/DataContext';
-import { FiSend, FiSearch, FiMoreVertical, FiCheck, FiCheckCircle, FiUser, FiPhone, FiMail, FiClock, FiMessageCircle } from 'react-icons/fi';
+import { FiSend, FiSearch, FiMoreVertical, FiCheck, FiCheckCircle, FiUser, FiPhone, FiMail, FiClock, FiMessageCircle, FiEdit2, FiTrash2, FiX } from 'react-icons/fi';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const AdminChat = () => {
-    const { conversations = [], messages = [], sendMessage, markAsRead, users = [] } = useData();
+    const { conversations = [], messages = [], sendMessage, markAsRead, users = [], addConversation, editMessage, deleteMessage } = useData();
     const [selectedConvo, setSelectedConvo] = useState(null);
     const [newMessage, setNewMessage] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
+    const [editingMsgId, setEditingMsgId] = useState(null);
+    const [deletingMsgId, setDeletingMsgId] = useState(null);
+    const [editValue, setEditValue] = useState('');
     const messagesEndRef = useRef(null);
 
     // Auto-scroll to bottom when messages change
@@ -49,8 +53,10 @@ const AdminChat = () => {
         }
     };
 
+
     const getConvoMessages = (convoId) => {
-        return (messages || []).filter(m => m.conversationId === convoId);
+        // Check both camelCase and snake_case to ensure all messages match
+        return (messages || []).filter(m => m.conversationId === convoId || m.conversation_id === convoId);
     };
 
     const getUnreadCount = (convoId) => {
@@ -59,24 +65,27 @@ const AdminChat = () => {
 
     const activeConvoList = React.useMemo(() => {
         const existingConvos = conversations || [];
-        const existingCustomerIds = new Set(existingConvos.map(c => c.customerId));
+        const existingCustomerIds = new Set(existingConvos.map(c => c.customerId || c.customer_id));
 
-        // Find users with plans who don't have a conversation yet
-        const subbedUsers = (users || []).filter(u => u.plan && u.plan !== 'None' && !existingCustomerIds.has(u.id));
+        // Show all registered users who don't have a conversation yet (no membership requirement)
+        // Users only need an ID - name can fallback to email prefix
+        const allUsers = (users || []).filter(u => u.id && !existingCustomerIds.has(u.id));
 
-        const newContacts = subbedUsers.map(u => ({
+        const newContacts = allUsers.map(u => ({
             id: `new-${u.id}`,
             customerId: u.id,
-            customerName: u.name,
+            customerName: u.name || u.email?.split('@')[0] || 'Unknown User',
             lastMessage: 'Start a new conversation',
             lastMessageTime: null,
             isNewContact: true
         }));
 
-        return [...existingConvos, ...newContacts].filter(c =>
-            c.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (c.lastMessage && c.lastMessage.toLowerCase().includes(searchQuery.toLowerCase()))
-        );
+        return [...existingConvos, ...newContacts].filter(c => {
+            const name = c.customerName || c.customer_name || '';
+            const msg = c.lastMessage || c.last_message || '';
+            return name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                msg.toLowerCase().includes(searchQuery.toLowerCase());
+        });
     }, [conversations, users, searchQuery]);
 
     const filteredConversations = activeConvoList;
@@ -169,12 +178,12 @@ const AdminChat = () => {
                                             fontSize: '1.1rem',
                                             flexShrink: 0
                                         }}>
-                                            {convo.customerName.charAt(0)}
+                                            {(convo.customerName || convo.customer_name || 'U').charAt(0)}
                                         </div>
                                         <div style={{ flex: 1, minWidth: 0 }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
-                                                <span style={{ color: '#fff', fontWeight: '600', fontSize: '0.95rem' }}>{convo.customerName}</span>
-                                                <span style={{ color: '#555', fontSize: '0.7rem' }}>{convo.isNewContact ? 'Subscribed' : formatTime(convo.lastMessageTime)}</span>
+                                                <span style={{ color: '#fff', fontWeight: '600', fontSize: '0.95rem' }}>{convo.customerName || convo.customer_name}</span>
+                                                <span style={{ color: '#555', fontSize: '0.7rem' }}>{convo.isNewContact ? 'Registered' : formatTime(convo.lastMessageTime || convo.last_message_time)}</span>
                                             </div>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                 <p style={{
@@ -187,7 +196,7 @@ const AdminChat = () => {
                                                     fontWeight: (unread > 0 || convo.isNewContact) ? '500' : '400',
                                                     fontStyle: convo.isNewContact ? 'italic' : 'normal'
                                                 }}>
-                                                    {convo.lastMessage || 'No messages yet'}
+                                                    {convo.lastMessage || convo.last_message || 'No messages yet'}
                                                 </p>
                                                 {unread > 0 && (
                                                     <span style={{
@@ -243,10 +252,10 @@ const AdminChat = () => {
                                     fontWeight: 'bold',
                                     color: '#000'
                                 }}>
-                                    {selectedConvo.customerName.charAt(0)}
+                                    {(selectedConvo.customerName || selectedConvo.customer_name || 'U').charAt(0)}
                                 </div>
                                 <div>
-                                    <div style={{ color: '#fff', fontWeight: '600', fontSize: '1.1rem' }}>{selectedConvo.customerName}</div>
+                                    <div style={{ color: '#fff', fontWeight: '600', fontSize: '1.1rem' }}>{selectedConvo.customerName || selectedConvo.customer_name}</div>
                                     <div style={{ color: '#4caf50', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                                         <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4caf50' }}></span>
                                         Online
@@ -289,32 +298,69 @@ const AdminChat = () => {
                         <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                             {getConvoMessages(selectedConvo.id).map((msg, idx) => {
                                 const isAdmin = msg.sender === 'admin';
+                                const isDeleted = msg.deleted;
+                                const isEditing = editingMsgId === msg.id;
+
                                 return (
                                     <div key={idx} style={{
                                         display: 'flex',
-                                        justifyContent: isAdmin ? 'flex-end' : 'flex-start'
+                                        flexDirection: 'column',
+                                        alignItems: isAdmin ? 'flex-end' : 'flex-start',
+                                        gap: '0.4rem'
                                     }}>
                                         <div style={{
                                             maxWidth: '70%',
-                                            padding: '1rem 1.2rem',
+                                            padding: '0.8rem 1.2rem',
                                             borderRadius: isAdmin ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-                                            background: isAdmin ? 'var(--color-gold)' : '#222',
-                                            color: isAdmin ? '#000' : '#fff',
+                                            background: isDeleted ? 'rgba(255,68,68,0.05)' : (isAdmin ? 'var(--color-gold)' : '#222'),
+                                            color: isAdmin && !isDeleted ? '#000' : '#fff',
                                             fontSize: '0.95rem',
-                                            lineHeight: '1.5'
-                                        }}>
-                                            <p style={{ margin: 0 }}>{msg.text}</p>
+                                            lineHeight: '1.5',
+                                            position: 'relative',
+                                            border: isDeleted ? '1px dashed #ff4444' : 'none'
+                                        }} className="message-bubble">
+                                            {isDeleted ? (
+                                                <div style={{ fontStyle: 'italic', opacity: 0.6, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                    <FiTrash2 size={12} /> Message Deleted
+                                                </div>
+                                            ) : isEditing ? (
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                                                    <textarea
+                                                        value={editValue}
+                                                        onChange={(e) => setEditValue(e.target.value)}
+                                                        style={{ width: '100%', background: 'rgba(0,0,0,0.1)', border: '1px solid rgba(0,0,0,0.1)', color: 'inherit', padding: '0.5rem', borderRadius: '8px' }}
+                                                    />
+                                                    <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                                                        <button onClick={() => setEditingMsgId(null)} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer' }}><FiX /></button>
+                                                        <button onClick={async () => { await editMessage(msg.id, editValue); setEditingMsgId(null); }} style={{ background: 'none', border: 'none', color: 'inherit', fontWeight: 'bold', cursor: 'pointer' }}><FiCheck /></button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <p style={{ margin: 0 }}>{msg.text}</p>
+                                                    {isAdmin && (
+                                                        <div className="message-actions" style={{ position: 'absolute', right: '100%', top: '50%', transform: 'translateY(-50%)', display: 'none', gap: '0.5rem', padding: '0 1rem' }}>
+                                                            <button onClick={() => { setEditingMsgId(msg.id); setEditValue(msg.text); }} style={{ background: '#333', border: 'none', color: '#fff', padding: '0.4rem', borderRadius: '50%', cursor: 'pointer' }}><FiEdit2 size={12} /></button>
+                                                            <button onClick={() => setDeletingMsgId(msg.id)} style={{ background: '#441111', border: 'none', color: '#ff4444', padding: '0.4rem', borderRadius: '50%', cursor: 'pointer' }}><FiTrash2 size={12} /></button>
+                                                        </div>
+                                                    )}
+                                                </>
+                                            )}
+
                                             <div style={{
                                                 display: 'flex',
                                                 justifyContent: 'flex-end',
                                                 alignItems: 'center',
                                                 gap: '0.3rem',
                                                 marginTop: '0.5rem',
-                                                opacity: 0.7,
-                                                fontSize: '0.7rem'
+                                                opacity: 0.6,
+                                                fontSize: '0.65rem',
+                                                fontWeight: 'bold'
                                             }}>
                                                 <span>{formatTime(msg.timestamp)}</span>
-                                                {isAdmin && <FiCheckCircle size={12} />}
+                                                {msg.edited && !isDeleted && <span>(EDITED {formatTime(msg.edited_at)})</span>}
+                                                {isDeleted && <span>(REMOVED {formatTime(msg.deleted_at)})</span>}
+                                                {isAdmin && !isDeleted && <FiCheckCircle size={10} />}
                                             </div>
                                         </div>
                                     </div>
@@ -403,10 +449,51 @@ const AdminChat = () => {
                 )}
             </div>
 
+            {/* Deletion Confirmation Modal */}
+            <AnimatePresence>
+                {deletingMsgId && (
+                    <div className="modal active" onClick={() => setDeletingMsgId(null)} style={{ zIndex: 3000 }}>
+                        <motion.div
+                            className="modal-content glass-modal"
+                            onClick={e => e.stopPropagation()}
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            style={{
+                                maxWidth: '400px',
+                                padding: '3rem',
+                                textAlign: 'center',
+                                borderRadius: '35px',
+                                background: 'rgba(10,10,10,0.99)',
+                                border: '1px solid rgba(239,68,68,0.2)',
+                                backdropFilter: 'blur(40px)'
+                            }}
+                        >
+                            <div style={{ width: '70px', height: '70px', background: 'rgba(239,68,68,0.1)', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444', margin: '0 auto 1.5rem' }}>
+                                <FiTrash2 size={28} />
+                            </div>
+                            <h3 style={{ color: '#fff', fontSize: '1.5rem', marginBottom: '0.8rem', fontFamily: 'var(--font-heading)' }}>Remove Message?</h3>
+                            <p style={{ color: '#666', marginBottom: '2rem', fontSize: '0.9rem', lineHeight: '1.6' }}>
+                                Are you sure you want to authorize the removal of this message from the communication registry?
+                            </p>
+                            <div style={{ display: 'flex', gap: '1rem' }}>
+                                <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setDeletingMsgId(null)}>ABORT</button>
+                                <button className="btn btn-primary" style={{ flex: 1, background: '#ef4444', border: 'none' }} onClick={async () => { await deleteMessage(deletingMsgId); setDeletingMsgId(null); }}>PURGE</button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
             <style>{`
                 @keyframes fadeIn {
                     from { opacity: 0; transform: translateY(10px); }
                     to { opacity: 1; transform: translateY(0); }
+                }
+                .message-bubble:hover .message-actions {
+                    display: flex !important;
+                }
+                .glass-modal {
+                    box-shadow: 0 20px 50px rgba(0,0,0,0.8);
                 }
             `}</style>
         </div>

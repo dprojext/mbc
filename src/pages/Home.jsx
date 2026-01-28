@@ -17,8 +17,15 @@ const Home = () => {
 
     useEffect(() => {
         incrementViewCount();
-        if (user) navigate('/dashboard');
-    }, [user]);
+        const isPreview = new URLSearchParams(window.location.search).get('preview') === 'true';
+        if (user && !isPreview) {
+            if (user.role?.toLowerCase() === 'admin') {
+                navigate('/admin');
+            } else {
+                navigate('/dashboard');
+            }
+        }
+    }, [user, navigate]);
 
     return (
         <div className="home-page">

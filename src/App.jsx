@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { DataProvider } from './context/DataContext';
+import { DataProvider, useData } from './context/DataContext';
 import ThemeInjector from './components/ThemeInjector';
 import DocumentViewer from './components/DocumentViewer';
 import ScrollToTop from './components/ScrollToTop';
@@ -60,8 +60,26 @@ const ProtectedRoute = ({ children, role }) => {
     return <Navigate to="/reset-password" replace />;
   }
 
-  if (role && user.role !== role) return <Navigate to="/" replace />;
+  if (role && user.role?.toLowerCase() !== role.toLowerCase()) return <Navigate to="/" replace />;
   return children;
+};
+
+// Analytics Tracker Component
+const PageTracker = () => {
+  const location = useLocation();
+  const { logAnalyticsEvent } = useData();
+  const { user } = useAuth();
+
+  React.useEffect(() => {
+    logAnalyticsEvent({
+      event_type: 'page_view',
+      page_path: location.pathname,
+      user_id: user?.id || 'anonymous',
+      timestamp: new Date().toISOString()
+    });
+  }, [location.pathname, user?.id]);
+
+  return null;
 };
 
 function App() {
@@ -73,6 +91,7 @@ function App() {
           <DocumentViewer />
           <ScrollToTop />
           <AuthProvider>
+            <PageTracker />
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
@@ -101,6 +120,7 @@ function App() {
                   <AdminDashboard />
                 </ProtectedRoute>
               } />
+              <Route path="/admin-bookings" element={<Navigate to="/admin/calendar" replace />} />
             </Routes>
           </AuthProvider>
         </ToastProvider>

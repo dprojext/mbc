@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useData } from '../context/DataContext';
+import ConciergeModal from './ConciergeModal';
 
 const iconMap = {
     wash: (
@@ -43,9 +44,12 @@ const iconMap = {
 };
 
 const Services = () => {
-    const { services } = useData();
+    const { services = [], settings = {} } = useData();
+    const navigate = useNavigate();
+    const [isConciergeOpen, setIsConciergeOpen] = useState(false);
+    const [conciergeData, setConciergeData] = useState({ name: '', price: '' });
     const scrollRef = React.useRef(null);
-    const [scrollProgress, setScrollProgress] = React.useState(0);
+    const [scrollProgress, setScrollProgress] = useState(0);
 
     const handleScroll = () => {
         if (scrollRef.current) {
@@ -103,12 +107,23 @@ const Services = () => {
                                         <li key={idx}>{feature}</li>
                                     ))}
                                 </ul>
-                                <Link to={`/booking?service=${encodeURIComponent(service.title)}`} className="service-link">
-                                    <span>Book This Service</span>
+                                <button
+                                    onClick={() => {
+                                        if (settings?.paymentsEnabled === false) {
+                                            setConciergeData({ name: service.title, price: service.price });
+                                            setIsConciergeOpen(true);
+                                        } else {
+                                            navigate(`/booking?service=${encodeURIComponent(service.title)}`);
+                                        }
+                                    }}
+                                    className="service-link"
+                                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                                >
+                                    <span>{settings?.paymentsEnabled === false ? 'Contact to Book' : 'Book This Service'}</span>
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                         <path d="M5 12h14M12 5l7 7-7 7" />
                                     </svg>
-                                </Link>
+                                </button>
                             </div>
                         </motion.div>
                     ))}
@@ -127,6 +142,12 @@ const Services = () => {
                     })}
                 </div>
             </div>
+            <ConciergeModal
+                isOpen={isConciergeOpen}
+                onClose={() => setIsConciergeOpen(false)}
+                itemName={conciergeData.name}
+                itemPrice={conciergeData.price}
+            />
         </section>
     );
 };

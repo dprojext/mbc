@@ -44,7 +44,7 @@ const AdminDashboard = () => {
         { path: '/admin/users', label: 'Users', icon: <FiUsers /> },
         { path: '/admin/analytics', label: 'Analytics', icon: <FiBarChart2 /> },
         { path: '/admin/services', label: 'Services', icon: <FiPackage /> },
-        { path: '/admin/subscriptions', label: 'Subscriptions', icon: <FiLayers /> },
+        { path: '/admin/subscriptions', label: 'Subscription', icon: <FiLayers /> },
         { path: '/admin/payments', label: 'Payments', icon: <FiCreditCard /> },
         { path: '/admin/data', label: 'Data Hub', icon: <FiDatabase /> },
         { path: '/admin/content', label: 'Settings', icon: <FiSettings /> },
@@ -70,7 +70,7 @@ const AdminDashboard = () => {
                             <div style={{ fontSize: '1rem', fontWeight: '600', color: '#fff' }}>
                                 {settings?.siteName || 'MBC'}
                             </div>
-                            <div style={{ fontSize: '0.6rem', color: '#555' }}>Control Panel</div>
+                            <div style={{ fontSize: '0.6rem', color: 'var(--color-silver, #555)' }}>Control Panel</div>
                         </div>
                     )}
                 </div>
@@ -113,7 +113,7 @@ const AdminDashboard = () => {
             <button
                 className="admin-mobile-toggle"
                 onClick={() => setMobileOpen(!mobileOpen)}
-                style={{ display: 'none' }}
+                aria-label="Toggle mobile menu"
             >
                 {mobileOpen ? <FiX /> : <FiMenu />}
             </button>

@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import {
     FiCalendar, FiCheckCircle, FiUser, FiUsers, FiTruck,
     FiMapPin, FiClock, FiMessageSquare, FiArrowRight,
-    FiChevronDown, FiMap, FiShield, FiZap, FiPhone
+    FiChevronDown, FiMap, FiShield, FiZap, FiPhone, FiSearch
 } from 'react-icons/fi';
 
 const Booking = () => {
-    const { services, plans, addBooking, bookings = [] } = useData();
+    const { services, plans, addBooking, bookings = [], users = [] } = useData();
     const { user } = useAuth();
     const [searchParams] = useSearchParams();
 
@@ -20,14 +20,17 @@ const Booking = () => {
     const [showMap, setShowMap] = useState(false);
     const [isLocationConfirmed, setIsLocationConfirmed] = useState(false);
     const [timePeriod, setTimePeriod] = useState('AM');
+    const [userSearchText, setUserSearchText] = useState('');
+    const [filteredUsers, setFilteredUsers] = useState([]);
+    const [mapSearchText, setMapSearchText] = useState('');
 
     // Combine previous booking data with saved profile data
     const userPrevBookings = bookings.filter(b => b.customer_id === user?.id || b.email === user?.email);
     const historyVehicles = [...new Set(userPrevBookings.map(b => b.vehicleType).filter(Boolean))];
-    const profileVehicles = user?.savedVehicles || [];
+    const profileVehicles = (user?.savedVehicles || []).map(v => typeof v === 'string' ? v : v.name);
     const prevVehicles = [...new Set([...profileVehicles, ...historyVehicles])];
 
-    const profileAddresses = user?.savedAddresses || [];
+    const profileAddresses = (user?.savedAddresses || []).map(a => typeof a === 'string' ? a : a.address);
 
     const [formData, setFormData] = useState({
         fullName: user?.name || '',
@@ -57,6 +60,30 @@ const Booking = () => {
     const showContactFields = bookingFor === 'other' || (!user?.name || !user?.phone);
 
     useEffect(() => {
+        if (userSearchText.trim().length > 1) {
+            const filtered = users.filter(u =>
+                (u.name && u.name.toLowerCase().includes(userSearchText.toLowerCase())) ||
+                (u.email && u.email.toLowerCase().includes(userSearchText.toLowerCase()))
+            ).slice(0, 5);
+            setFilteredUsers(filtered);
+        } else {
+            setFilteredUsers([]);
+        }
+    }, [userSearchText, users]);
+
+    const selectUserFromSearch = (u) => {
+        setFormData(prev => ({
+            ...prev,
+            fullName: u.name || '',
+            email: u.email || '',
+            phone: u.phone || ''
+        }));
+        setUserSearchText('');
+        setFilteredUsers([]);
+        setBookingFor('other'); // Switch to 'other' so fields are visible
+    };
+
+    useEffect(() => {
         if (bookingFor === 'myself') {
             setFormData(prev => ({
                 ...prev,
@@ -64,14 +91,6 @@ const Booking = () => {
                 email: user?.email || '',
                 phone: user?.phone || '',
                 vehicleType: vehicleChoice === 'previous' && prevVehicles.length > 0 ? (prevVehicles[0] || '') : ''
-            }));
-        } else {
-            setFormData(prev => ({
-                ...prev,
-                fullName: '',
-                email: '',
-                phone: '',
-                vehicleType: ''
             }));
         }
     }, [bookingFor, user, vehicleChoice, prevVehicles.length]);
@@ -82,13 +101,13 @@ const Booking = () => {
         if (name === 'location') setIsLocationConfirmed(false);
     };
 
-    const handleMapConfirm = () => {
-        const confirmedLocation = "Bole Medhanialem, Street 14 (Verified Pin)";
-        setFormData(prev => ({ ...prev, location: confirmedLocation }));
+    const handleMapConfirm = (lat, lng, label) => {
+        setFormData(prev => ({ ...prev, location: label || `${lat.toFixed(4)}, ${lng.toFixed(4)}` }));
         setIsLocationConfirmed(true);
         setShowMap(false);
     };
 
+    const navigate = useNavigate();
     const handleSubmit = (e) => {
         e.preventDefault();
         addBooking({
@@ -102,7 +121,10 @@ const Booking = () => {
         setBookingFor('myself');
     };
 
-    const closeModal = () => setModalOpen(false);
+    const closeModal = () => {
+        setModalOpen(false);
+        navigate('/dashboard/bookings');
+    };
     const today = new Date().toISOString().split('T')[0];
 
     const morningSlots = ['8:00 AM', '9:30 AM', '11:00 AM'];
@@ -159,7 +181,52 @@ const Booking = () => {
                             position: 'relative'
                         }}
                     >
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1.5rem' }}>
+                            <Link to="/dashboard" className="btn btn-secondary" style={{ padding: '0.6rem 1.2rem', fontSize: '0.8rem', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                Back to Home
+                            </Link>
+                        </div>
+
                         <form onSubmit={handleSubmit}>
+                            {/* Admin Search for Users */}
+                            {user?.role?.toLowerCase() === 'admin' && (
+                                <div style={{ marginBottom: '2rem', position: 'relative' }}>
+                                    <label style={{ color: 'var(--color-gold)', fontSize: '0.7rem', fontWeight: '900', textTransform: 'uppercase', marginBottom: '0.8rem', display: 'block' }}>Search Member Account</label>
+                                    <div style={{ position: 'relative' }}>
+                                        <FiSearch style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#555' }} />
+                                        <input
+                                            placeholder="Find user by name or email..."
+                                            value={userSearchText}
+                                            onChange={e => setUserSearchText(e.target.value)}
+                                            style={{ width: '100%', padding: '1rem 1rem 1rem 2.8rem', background: 'rgba(201,169,106,0.05)', border: '1px solid rgba(201,169,106,0.2)', borderRadius: '12px', color: '#fff', outline: 'none' }}
+                                        />
+                                    </div>
+                                    <AnimatePresence>
+                                        {filteredUsers.length > 0 && (
+                                            <motion.div
+                                                initial={{ opacity: 0, y: -10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                exit={{ opacity: 0, y: -10 }}
+                                                style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#1a1a1a', border: '1px solid #333', borderRadius: '10px', marginTop: '0.4rem', zIndex: 100, overflow: 'hidden' }}
+                                            >
+                                                {filteredUsers.map(u => (
+                                                    <div
+                                                        key={u.id}
+                                                        onClick={() => selectUserFromSearch(u)}
+                                                        style={{ padding: '0.8rem 1rem', cursor: 'pointer', borderBottom: '1px solid #222', display: 'flex', flexDirection: 'column' }}
+                                                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(201,169,106,0.1)'}
+                                                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                                    >
+                                                        <span style={{ color: '#fff', fontSize: '0.9rem', fontWeight: 'bold' }}>{u.name}</span>
+                                                        <span style={{ color: '#666', fontSize: '0.75rem' }}>{u.email}</span>
+                                                    </div>
+                                                ))}
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
+                            )}
+
                             {/* Selection: Myself vs Other */}
                             <div style={{ marginBottom: '2.5rem' }}>
                                 <label style={{ color: '#888', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '1rem', display: 'block' }}>Who are you booking for?</label>
@@ -189,6 +256,7 @@ const Booking = () => {
                                 </div>
                             </div>
 
+                            {/* ... existing fields ... */}
                             {showContactFields && (
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
                                     <div className="form-input-group">
@@ -226,7 +294,7 @@ const Booking = () => {
                                 {bookingFor === 'myself' && vehicleChoice === 'previous' && prevVehicles.length > 0 ? (
                                     <div style={{ position: 'relative' }}>
                                         <select name="vehicleType" value={formData.vehicleType} onChange={handleChange} required
-                                            style={{ width: '100%', padding: '0.8rem 1rem 0.8rem 2.8rem', background: '#111', border: '1px solid #333', borderRadius: '10px', color: '#fff', appearance: 'none' }}
+                                            style={{ width: '100%', padding: '0.8rem 1rem 0.8rem 2.8rem', background: '#111', border: '1px solid #333', borderRadius: '10px', color: '#fff', appearance: 'none', textAlign: 'left', textAlignLast: 'left' }}
                                         >
                                             <option value="">Choose vehicle...</option>
                                             {prevVehicles.map(v => <option key={v} value={v}>{v}</option>)}
@@ -248,7 +316,7 @@ const Booking = () => {
                                 <label style={{ color: '#888', fontSize: '0.75rem', marginBottom: '0.5rem', display: 'block' }}>Service Type</label>
                                 <div style={{ position: 'relative' }}>
                                     <select name="service" value={formData.service} onChange={handleChange} required
-                                        style={{ width: '100%', padding: '0.8rem 1rem 0.8rem 2.8rem', background: '#111', border: '1px solid #333', borderRadius: '10px', color: '#fff', appearance: 'none' }}
+                                        style={{ width: '100%', padding: '0.8rem 1rem 0.8rem 2.8rem', background: '#111', border: '1px solid #333', borderRadius: '10px', color: '#fff', appearance: 'none', textAlign: 'left', textAlignLast: 'left' }}
                                     >
                                         <option value="">Choose a treatment...</option>
                                         {services.map(s => <option key={s.id} value={s.title}>{s.title} ({s.price})</option>)}
@@ -273,55 +341,15 @@ const Booking = () => {
                             </div>
 
                             <div style={{ marginBottom: '2rem' }}>
-                                <label style={{ color: '#888', fontSize: '0.75rem', marginBottom: '1.2rem', display: 'block', textTransform: 'uppercase', letterSpacing: '1px' }}>Preferred Time</label>
-
-                                <div style={{ background: '#111', padding: '1.5rem', borderRadius: '20px', border: '1px solid #222' }}>
-                                    <div style={{ display: 'flex', background: '#0a0a0a', padding: '0.3rem', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid #222' }}>
-                                        {['AM', 'PM'].map(p => (
-                                            <button
-                                                key={p}
-                                                type="button"
-                                                onClick={() => setTimePeriod(p)}
-                                                style={{
-                                                    flex: 1, padding: '0.6rem', borderRadius: '8px', border: 'none',
-                                                    background: timePeriod === p ? 'var(--color-gold)' : 'transparent',
-                                                    color: timePeriod === p ? '#000' : '#555',
-                                                    fontWeight: 'bold', cursor: 'pointer', transition: '0.3s'
-                                                }}
-                                            >
-                                                {p === 'AM' ? 'Morning' : 'Afternoon'}
-                                            </button>
-                                        ))}
-                                    </div>
-
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.8rem' }}>
-                                        {(timePeriod === 'AM' ? morningSlots : afternoonSlots).map(slot => (
-                                            <button
-                                                key={slot}
-                                                type="button"
-                                                onClick={() => setFormData(prev => ({ ...prev, time: slot }))}
-                                                style={{
-                                                    padding: '0.8rem',
-                                                    borderRadius: '12px',
-                                                    fontSize: '0.85rem',
-                                                    cursor: 'pointer',
-                                                    transition: '0.3s',
-                                                    background: formData.time === slot ? 'rgba(201,169,106,0.1)' : 'transparent',
-                                                    border: '1px solid',
-                                                    borderColor: formData.time === slot ? 'var(--color-gold)' : '#222',
-                                                    color: formData.time === slot ? 'var(--color-gold)' : '#888',
-                                                    fontWeight: formData.time === slot ? 'bold' : 'normal',
-                                                    display: 'flex',
-                                                    flexDirection: 'column',
-                                                    alignItems: 'center',
-                                                    gap: '0.4rem'
-                                                }}
-                                            >
-                                                <FiClock size={14} style={{ opacity: formData.time === slot ? 1 : 0.3 }} />
-                                                {slot}
-                                            </button>
-                                        ))}
-                                    </div>
+                                <label style={{ color: '#888', fontSize: '0.75rem', marginBottom: '0.8rem', display: 'block' }}>Preferred Time</label>
+                                <div style={{ position: 'relative' }}>
+                                    <input type="time" name="time" value={formData.time} onChange={handleChange} required
+                                        style={{
+                                            width: '100%', padding: '0.8rem 1rem 0.8rem 2.8rem', background: '#111', border: '1px solid #333',
+                                            borderRadius: '10px', color: '#fff'
+                                        }}
+                                    />
+                                    <FiClock style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#555' }} />
                                 </div>
                             </div>
 
@@ -332,7 +360,7 @@ const Booking = () => {
                                         <div style={{ display: 'flex', gap: '0.5rem' }}>
                                             <select
                                                 onChange={(e) => setFormData(p => ({ ...p, location: e.target.value }))}
-                                                style={{ background: 'none', border: 'none', color: 'var(--color-gold)', fontSize: '0.7rem', cursor: 'pointer', outline: 'none' }}
+                                                style={{ background: 'none', border: 'none', color: 'var(--color-gold)', fontSize: '0.7rem', cursor: 'pointer', outline: 'none', textAlign: 'left', textAlignLast: 'left' }}
                                             >
                                                 <option value="" style={{ background: '#111' }}>Use Saved Address...</option>
                                                 {profileAddresses.map(a => <option key={a} value={a} style={{ background: '#111' }}>{a}</option>)}
@@ -368,37 +396,56 @@ const Booking = () => {
                                     {showMap && (
                                         <motion.div
                                             initial={{ opacity: 0, height: 0 }}
-                                            animate={{ opacity: 1, height: '300px' }}
+                                            animate={{ opacity: 1, height: '400px' }}
                                             exit={{ opacity: 0, height: 0 }}
                                             style={{
                                                 width: '100%', background: '#0a0a0a', border: '1px solid #333',
                                                 borderRadius: '12px', overflow: 'hidden', position: 'relative'
                                             }}
                                         >
-                                            <iframe
-                                                title="location-picker"
-                                                width="100%"
-                                                height="100%"
-                                                frameBorder="0"
-                                                style={{ border: 0, filter: 'invert(90%) hue-rotate(180deg) contrast(90%)' }}
-                                                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15762.684205561937!2d38.7758334!3d8.9813889!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x164b85cef5ab402d%3A0x846716a10ead4b1d!2sBole%2C%20Addis%20Ababa!5e0!3m2!1sen!2set!4v1700000000000!5m2!1sen!2set"
-                                                allowFullScreen
-                                            ></iframe>
-                                            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'none' }}>
+                                            <div style={{ position: 'absolute', top: '1rem', left: '1rem', right: '1rem', zIndex: 1000 }}>
+                                                <div style={{ position: 'relative' }}>
+                                                    <FiSearch style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-gold)' }} />
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Search location address..."
+                                                        value={mapSearchText}
+                                                        onChange={e => setMapSearchText(e.target.value)}
+                                                        onKeyDown={e => {
+                                                            if (e.key === 'Enter') {
+                                                                e.preventDefault();
+                                                                const query = mapSearchText;
+                                                                fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`)
+                                                                    .then(res => res.json())
+                                                                    .then(data => {
+                                                                        if (data && data.length > 0) {
+                                                                            const { lat, lon, display_name } = data[0];
+                                                                            handleMapConfirm(parseFloat(lat), parseFloat(lon), display_name);
+                                                                        }
+                                                                    });
+                                                            }
+                                                        }}
+                                                        style={{ width: '100%', padding: '0.8rem 1rem 0.8rem 2.8rem', background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', border: '1px solid var(--color-gold)', borderRadius: '12px', color: '#fff', fontSize: '0.85rem', outline: 'none' }}
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div id="map-container" style={{ width: '100%', height: '100%' }}></div>
+                                            <MapLogic onLocationSelect={handleMapConfirm} />
+                                            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'none', zIndex: 1000 }}>
                                                 <FiMapPin size={32} color="var(--color-gold)" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }} />
                                             </div>
-                                            <button
-                                                type="button"
-                                                onClick={handleMapConfirm}
-                                                style={{
-                                                    position: 'absolute', bottom: '1rem', left: '50%', transform: 'translateX(-50%)',
-                                                    padding: '0.6rem 1.2rem', background: 'var(--color-gold)', color: '#000',
-                                                    border: 'none', borderRadius: '50px', fontWeight: 'bold', cursor: 'pointer',
-                                                    boxShadow: '0 4px 15px rgba(0,0,0,0.3)'
-                                                }}
-                                            >
-                                                Confirm Location
-                                            </button>
+                                            <div style={{
+                                                position: 'absolute', bottom: '1rem', left: '0', right: '0',
+                                                display: 'flex', justifyContent: 'center', zIndex: 1000
+                                            }}>
+                                                <div style={{
+                                                    background: 'rgba(0,0,0,0.8)', padding: '0.5rem 1rem',
+                                                    borderRadius: '50px', fontSize: '0.75rem', color: '#fff',
+                                                    border: '1px solid var(--color-gold)'
+                                                }}>
+                                                    Tap map to set executive service location
+                                                </div>
+                                            </div>
                                         </motion.div>
                                     )}
                                 </AnimatePresence>
@@ -455,8 +502,82 @@ const Booking = () => {
                 .form-input-group label { transition: 0.3s; }
                 .form-input-group:focus-within label { color: var(--color-gold); }
             `}</style>
-        </section>
+        </section >
     );
+};
+
+const MapLogic = ({ onLocationSelect, lang = 'en' }) => {
+    const onLocationSelectRef = React.useRef(onLocationSelect);
+    const lastCoordsRef = React.useRef(null);
+    const markerRef = React.useRef(null);
+    const mapRef = React.useRef(null);
+
+    React.useEffect(() => {
+        onLocationSelectRef.current = onLocationSelect;
+    });
+
+    const selectLocation = React.useCallback((lat, lng, label) => {
+        lastCoordsRef.current = { lat, lng };
+        if (markerRef.current) {
+            markerRef.current.setLatLng([lat, lng]);
+        } else if (mapRef.current) {
+            markerRef.current = window.L.marker([lat, lng]).addTo(mapRef.current);
+        }
+
+        if (mapRef.current) mapRef.current.setView([lat, lng], 16);
+
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=${lang}`)
+            .then(res => res.json())
+            .then(data => {
+                onLocationSelectRef.current(lat, lng, data.display_name || label || `${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+            })
+            .catch(() => {
+                onLocationSelectRef.current(lat, lng, label || `${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+            });
+    }, [lang]);
+
+    React.useEffect(() => {
+        if (!document.getElementById('leaflet-css')) {
+            const link = document.createElement('link');
+            link.id = 'leaflet-css';
+            link.rel = 'stylesheet';
+            link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+            document.head.appendChild(link);
+        }
+
+        const runMap = () => {
+            if (!window.L) return;
+            const container = document.getElementById('map-container');
+            if (!container) return;
+            if (container._leaflet_id) return;
+
+            const map = window.L.map('map-container').setView([9.0192, 38.7525], 13);
+            mapRef.current = map;
+
+            window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+
+            map.on('click', (e) => {
+                selectLocation(e.latlng.lat, e.latlng.lng);
+            });
+
+            if (container.querySelector('.leaflet-tile-pane')) {
+                container.querySelector('.leaflet-tile-pane').style.filter = 'invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%)';
+            }
+        };
+
+        if (window.L) {
+            runMap();
+        } else {
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+            script.onload = runMap;
+            document.head.appendChild(script);
+        }
+    }, [lang, selectLocation]);
+
+    return null;
 };
 
 export default Booking;

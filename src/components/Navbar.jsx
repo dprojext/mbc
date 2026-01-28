@@ -3,7 +3,7 @@ import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import { Link } from 'react-scroll';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
-import { FiBell, FiMessageSquare, FiUser, FiZap } from 'react-icons/fi';
+import { FiBell, FiMessageSquare, FiUser, FiZap, FiSettings } from 'react-icons/fi';
 
 const Navbar = () => {
     const [scrolled, setScrolled] = useState(false);
@@ -35,10 +35,27 @@ const Navbar = () => {
         setNotifOpen(false);
     };
 
+    // Get time-based greeting
+    const getGreeting = () => {
+        const hour = new Date().getHours();
+        if (hour < 12) return 'Good Morning';
+        if (hour < 17) return 'Good Afternoon';
+        return 'Good Evening';
+    };
+
+    // Get user's first name
+    const getFirstName = () => {
+        if (!user?.name) return '';
+        if (user.name === user.email || user.name.includes('@')) return '';
+        return user.name.split(' ')[0];
+    };
+
+    const isAdmin = user?.role?.toLowerCase() === 'admin';
+
     return (
         <nav className={`navbar ${scrolled ? 'scrolled' : ''}`}>
             <div className="nav-container">
-                <RouterLink to={user ? "/dashboard" : "/"} className="nav-logo" onClick={() => { setNotifOpen(false); setProfileOpen(false); }}>
+                <RouterLink to={user ? (user.role?.toLowerCase() === 'admin' ? "/admin" : "/dashboard") : "/"} className="nav-logo" onClick={() => { setNotifOpen(false); setProfileOpen(false); }}>
                     {settings?.logo && (settings.logo.startsWith('data:') || settings.logo.startsWith('http') || settings.logo.startsWith('/')) ? (
                         <img src={settings.logo} alt={settings.siteName || 'Logo'} className="logo-img" />
                     ) : settings?.logo ? (
@@ -80,11 +97,8 @@ const Navbar = () => {
                             </>
                         ) : (
                             <>
-                                <li><RouterLink to="/dashboard" className="nav-link" onClick={() => setIsOpen(false)}>Dashboard</RouterLink></li>
-                                <li><RouterLink to="/dashboard/services" className="nav-link" onClick={() => setIsOpen(false)}>Service</RouterLink></li>
-                                <li><RouterLink to="/dashboard/subscription" className="nav-link" onClick={() => setIsOpen(false)}>Subscription</RouterLink></li>
-                                <li><RouterLink to="/dashboard/bookings" className="nav-link" onClick={() => setIsOpen(false)}>Previous Books</RouterLink></li>
-                                <li><RouterLink to="/dashboard/chat" className="nav-link" onClick={() => setIsOpen(false)}>Chat</RouterLink></li>
+                                {/* Logged in users: links are handled by the dashboard sub-nav */}
+                                <li style={{ visibility: 'hidden' }}><RouterLink to="/dashboard" className="nav-link">Dashboard</RouterLink></li>
                             </>
                         )}
                     </ul>
@@ -99,8 +113,16 @@ const Navbar = () => {
                         </div>
                     )}
                     {user && (
-                        <div className="mobile-auth-actions" style={{ gap: '1rem' }}>
-                            <RouterLink to="/booking" className="btn btn-primary" style={{ width: '100%', borderRadius: '12px' }} onClick={() => setIsOpen(false)}>
+                        <div className="mobile-auth-actions" style={{ gap: '0.8rem' }}>
+                            <RouterLink to="/dashboard/notifications" className="nav-link" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <FiBell /> Notifications {unreadNotifications.length > 0 && <span className="badge-pill">{unreadNotifications.length}</span>}
+                            </RouterLink>
+                            {isAdmin && (
+                                <RouterLink to="/admin" className="nav-link" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--color-gold)' }}>
+                                    <FiSettings /> Admin Panel
+                                </RouterLink>
+                            )}
+                            <RouterLink to="/booking" className="btn btn-primary" style={{ width: '100%', borderRadius: '12px', marginTop: '1rem' }} onClick={() => setIsOpen(false)}>
                                 <FiZap style={{ marginRight: '8px' }} /> Book Now
                             </RouterLink>
                             <button onClick={handleLogout} className="btn btn-secondary" style={{ width: '100%', borderRadius: '12px' }}>Sign Out</button>
@@ -112,6 +134,10 @@ const Navbar = () => {
                 <div className="nav-actions">
                     {user ? (
                         <div className="user-nav-actions" style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
+                            {/* Time-based Greeting */}
+                            <div className="nav-greeting desktop-only-btn" style={{ color: '#888', fontSize: '0.9rem', fontWeight: '500' }}>
+                                {getGreeting()}{getFirstName() && <span style={{ color: 'var(--color-gold)', fontWeight: '700' }}>, {getFirstName()}</span>}
+                            </div>
                             <RouterLink to="/booking" className="btn btn-primary btn-sm desktop-only-btn" style={{ padding: '0.6rem 1.2rem', fontSize: '0.8rem' }}>
                                 <FiZap style={{ marginRight: '5px' }} /> Book Now
                             </RouterLink>
@@ -140,10 +166,18 @@ const Navbar = () => {
                                         </div>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                                             {recentNotifs.length > 0 ? recentNotifs.map(n => (
-                                                <div key={n.id} style={{ padding: '0.6rem', borderRadius: '8px', background: n.read ? 'transparent' : 'rgba(201,169,106,0.05)', border: n.read ? 'none' : '1px solid rgba(201,169,106,0.1)' }}>
-                                                    <div style={{ color: '#fff', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.2rem' }}>{n.title}</div>
-                                                    <div style={{ color: '#888', fontSize: '0.75rem', lineBreak: 'anywhere' }}>{n.message.substring(0, 60)}...</div>
-                                                </div>
+                                                <RouterLink
+                                                    key={n.id}
+                                                    to="/dashboard/notifications"
+                                                    state={{ openNotifId: n.id }}
+                                                    onClick={() => setNotifOpen(false)}
+                                                    style={{ textDecoration: 'none', display: 'block', marginBottom: '0.8rem' }}
+                                                >
+                                                    <div style={{ padding: '0.6rem', borderRadius: '8px', background: n.read ? 'transparent' : 'rgba(201,169,106,0.05)', border: n.read ? 'none' : '1px solid rgba(201,169,106,0.1)' }}>
+                                                        <div style={{ color: '#fff', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.2rem' }}>{n.title}</div>
+                                                        <div style={{ color: '#888', fontSize: '0.75rem', lineBreak: 'anywhere' }}>{n.message.substring(0, 60)}...</div>
+                                                    </div>
+                                                </RouterLink>
                                             )) : (
                                                 <div style={{ padding: '1rem', textAlign: 'center', color: '#444', fontSize: '0.85rem' }}>No recent notifications</div>
                                             )}
@@ -166,11 +200,19 @@ const Navbar = () => {
                                     className="nav-profile-btn"
                                     onClick={() => { setProfileOpen(!profileOpen); setNotifOpen(false); }}
                                     style={{
-                                        background: 'none', border: 'none', color: '#fff', fontSize: '1.2rem', cursor: 'pointer',
+                                        background: 'none', border: 'none', cursor: 'pointer',
                                         display: 'flex', alignItems: 'center', gap: '0.5rem'
                                     }}
                                 >
-                                    <FiUser />
+                                    <div style={{
+                                        width: '36px', height: '36px', borderRadius: '50%',
+                                        background: 'var(--gradient-gold)', color: '#000',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        fontWeight: '800', fontSize: '0.85rem', border: '2px solid rgba(255,255,255,0.1)',
+                                        textTransform: 'uppercase', boxShadow: '0 4px 10px rgba(0,0,0,0.3)'
+                                    }}>
+                                        {getFirstName() ? getFirstName().charAt(0) : (user?.email?.charAt(0) || 'U')}
+                                    </div>
                                 </button>
 
                                 {profileOpen && (
@@ -181,7 +223,7 @@ const Navbar = () => {
                                         zIndex: 100
                                     }}>
                                         <div style={{ padding: '0.8rem', borderBottom: '1px solid #222', marginBottom: '0.5rem' }}>
-                                            <div style={{ color: '#fff', fontSize: '0.9rem', fontWeight: 'bold' }}>{user.name}</div>
+                                            <div style={{ color: '#fff', fontSize: '0.9rem', fontWeight: 'bold' }}>{user.name && user.name !== user.email ? user.name : 'Member'}</div>
                                             <div style={{ color: '#666', fontSize: '0.75rem' }}>{user.email}</div>
                                         </div>
 
@@ -198,7 +240,7 @@ const Navbar = () => {
                                             <FiUser size={14} color="var(--color-gold)" /> Profile Settings
                                         </RouterLink>
 
-                                        {user?.role === 'admin' && (
+                                        {user?.role?.toLowerCase() === 'admin' && (
                                             <RouterLink
                                                 to="/admin"
                                                 className="dropdown-item"
@@ -206,11 +248,10 @@ const Navbar = () => {
                                                 style={{
                                                     width: '100%', padding: '0.8rem', background: 'none', border: 'none',
                                                     color: 'var(--color-gold)', display: 'flex', alignItems: 'center', gap: '0.8rem',
-                                                    fontSize: '0.9rem', textDecoration: 'none', borderRadius: '8px',
-                                                    fontWeight: '600'
+                                                    fontSize: '0.9rem', textDecoration: 'none', borderRadius: '8px', fontWeight: 'bold'
                                                 }}
                                             >
-                                                <FiZap size={14} color="var(--color-gold)" /> Admin Panel
+                                                <FiSettings size={14} /> Admin Panel
                                             </RouterLink>
                                         )}
 

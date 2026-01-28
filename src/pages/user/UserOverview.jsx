@@ -2,53 +2,100 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
-import { FiCalendar, FiCreditCard, FiMessageSquare, FiBell, FiChevronRight, FiCheckCircle, FiClock, FiStar } from 'react-icons/fi';
+import { FiCalendar, FiCreditCard, FiMessageSquare, FiBell, FiChevronRight, FiCheckCircle, FiClock, FiStar, FiUser } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 
 const UserOverview = () => {
     const { user } = useAuth();
-    const { bookings = [], userNotifications = [], plans = [] } = useData();
+    const data = useData() || {};
+    const { bookings = [], userNotifications = [], plans = [] } = data;
 
     // Data filtering
     const myBookings = bookings.filter(b => b.customer_id === user?.id || b.email === user?.email);
     const myNotifications = userNotifications.filter(n => n.user_id === user?.id).slice(0, 3);
     const activeSubscription = user?.subscriptionPlan || 'No Active Plan';
 
+    const nextWash = myBookings
+        .filter(b => b.status === 'Confirmed' || b.status === 'Approved' || b.status === 'Pending')
+        .sort((a, b) => new Date(a.date) - new Date(b.date))[0];
+
     const stats = [
-        { label: 'Upcoming Wash', value: myBookings.find(b => b.status === 'Confirmed')?.date || 'None', icon: <FiCalendar />, color: 'var(--color-gold)' },
-        { label: 'Current Plan', value: activeSubscription, icon: <FiStar />, color: '#4caf50' },
-        { label: 'Notifications', value: userNotifications.filter(n => n.user_id === user?.id && !n.read).length, icon: <FiBell />, color: '#2196f3' }
+        { label: 'Upcoming Wash', value: nextWash ? `${nextWash.date} @ ${nextWash.time}` : 'None', icon: <FiCalendar />, color: 'var(--color-gold)' },
+        { label: 'Current Plan', value: activeSubscription.toUpperCase(), icon: <FiStar />, color: 'var(--color-gold)' },
+        { label: 'Assets Spent', value: `$${myBookings.reduce((s, b) => s + (Number(b.price) || 0), 0)}`, icon: <FiCreditCard />, color: 'var(--color-gold)' },
+        { label: 'Alerts', value: userNotifications.filter(n => n.user_id === user?.id && !n.read).length, icon: <FiBell />, color: 'var(--color-gold)' }
     ];
 
     return (
         <div className="user-overview">
-            <header style={{ marginBottom: '2.5rem' }}>
-                <h1 style={{ color: '#fff', fontSize: '2rem', margin: 0 }}>Welcome back, <span className="gold">{user?.name?.split(' ')[0]}</span></h1>
-                <p style={{ color: '#888', marginTop: '0.5rem' }}>Here's what's happening with your vehicles today.</p>
-            </header>
+            {/* Header removed: handled by UserDashboard executive header */}
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem' }}>
-                {stats.map((stat, idx) => (
-                    <motion.div
-                        key={idx}
-                        className="admin-stat-card"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.1 }}
-                    >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(255,255,255,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: stat.color }}>
-                                {stat.icon}
-                            </div>
-                        </div>
-                        <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.2rem' }}>{stat.value}</div>
-                        <div style={{ color: '#666', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{stat.label}</div>
-                    </motion.div>
-                ))}
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+                gap: '1rem',
+                marginBottom: '2rem'
+            }}>
+                {stats.map((stat, idx) => {
+                    const paths = {
+                        'Upcoming Wash': '/dashboard/bookings',
+                        'Current Plan': '/dashboard/subscription',
+                        'Assets Spent': '/dashboard/bookings',
+                        'Alerts': '/dashboard/notifications'
+                    };
+                    return (
+                        <Link key={idx} to={paths[stat.label]} style={{ textDecoration: 'none' }}>
+                            <motion.div
+                                className="admin-stat-card"
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: idx * 0.1 }}
+                                style={{ padding: '1.2rem', cursor: 'pointer', height: '100%' }}
+                                whileHover={{ translateY: -5, borderColor: 'var(--color-gold)' }}
+                            >
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.8rem' }}>
+                                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: stat.color, fontSize: '1rem' }}>
+                                        {stat.icon}
+                                    </div>
+                                </div>
+                                <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.2rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{stat.value}</div>
+                                <div style={{ color: '#666', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{stat.label}</div>
+                            </motion.div>
+                        </Link>
+                    );
+                })}
             </div>
 
             <div className="admin-grid-2">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                    {/* Quick Access - MOVED UP and EXPANDED */}
+                    <div className="admin-card">
+                        <div style={{ color: 'var(--color-gold)', fontSize: '0.65rem', fontWeight: '900', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '0.3rem', opacity: 0.6 }}>Executive Portal</div>
+                        <h3 style={{ color: '#fff', fontSize: '1.3rem', marginBottom: '1.5rem', fontWeight: '800' }}>Quick Actions</h3>
+                        <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 140px), 1fr))',
+                            gap: '1rem'
+                        }}>
+                            <Link to="/booking" className="admin-nav-item" style={{ flexDirection: 'column', gap: '0.6rem', textAlign: 'center', padding: '1.2rem', background: 'rgba(201,169,106,0.05)', border: '1px solid rgba(201,169,106,0.1)' }}>
+                                <FiCalendar color="var(--color-gold)" size={22} />
+                                <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#fff' }}>Book Wash</span>
+                            </Link>
+                            <Link to="/dashboard/subscription" className="admin-nav-item" style={{ flexDirection: 'column', gap: '0.6rem', textAlign: 'center', padding: '1.2rem' }}>
+                                <FiStar color="var(--color-gold)" size={22} />
+                                <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#fff' }}>My Plan</span>
+                            </Link>
+                            <Link to="/dashboard/payments" className="admin-nav-item" style={{ flexDirection: 'column', gap: '0.6rem', textAlign: 'center', padding: '1.2rem' }}>
+                                <FiCreditCard color="var(--color-gold)" size={22} />
+                                <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#fff' }}>Settlements</span>
+                            </Link>
+                            <Link to="/dashboard/chat" className="admin-nav-item" style={{ flexDirection: 'column', gap: '0.6rem', textAlign: 'center', padding: '1.2rem' }}>
+                                <FiMessageSquare color="var(--color-gold)" size={22} />
+                                <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#fff' }}>Support</span>
+                            </Link>
+                        </div>
+                    </div>
+
                     {/* Recent Bookings */}
                     <div className="admin-card">
                         <div className="admin-flex-between" style={{ marginBottom: '1.5rem' }}>
@@ -69,8 +116,8 @@ const UserOverview = () => {
                                     </div>
                                     <span style={{
                                         padding: '0.3rem 0.6rem', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 'bold',
-                                        background: booking.status === 'Confirmed' ? 'rgba(76,175,80,0.1)' : 'rgba(255,152,0,0.1)',
-                                        color: booking.status === 'Confirmed' ? '#4caf50' : '#ff9800'
+                                        background: booking.status === 'Confirmed' || booking.status === 'Approved' ? 'rgba(76,175,80,0.1)' : 'rgba(255,152,0,0.1)',
+                                        color: booking.status === 'Confirmed' || booking.status === 'Approved' ? '#4caf50' : '#ff9800'
                                     }}>
                                         {booking.status}
                                     </span>
@@ -87,31 +134,33 @@ const UserOverview = () => {
                     <div className="admin-card">
                         <h3 style={{ color: '#fff', fontSize: '1.1rem', marginBottom: '1.5rem' }}>Latest Alerts</h3>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            {myNotifications.length > 0 ? myNotifications.map(notif => (
-                                <div key={notif.id} style={{ padding: '0.8rem', borderLeft: '3px solid var(--color-gold)', background: 'rgba(255,255,255,0.02)', borderRadius: '0 8px 8px 0' }}>
-                                    <div style={{ color: '#fff', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.2rem' }}>{notif.title}</div>
-                                    <div style={{ color: '#666', fontSize: '0.75rem' }}>{notif.message.substring(0, 60)}...</div>
-                                </div>
-                            )) : (
+                            {userNotifications
+                                .filter(n => n.user_id === user?.id)
+                                .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+                                .slice(0, 3)
+                                .map(notif => (
+                                    <Link
+                                        key={notif.id}
+                                        to="/dashboard/notifications"
+                                        state={{ openNotifId: notif.id }}
+                                        style={{ textDecoration: 'none', display: 'block' }}
+                                    >
+                                        <div style={{ padding: '0.8rem', borderLeft: '3px solid var(--color-gold)', background: 'rgba(255,255,255,0.02)', borderRadius: '0 8px 8px 0', cursor: 'pointer', transition: '0.2s' }}
+                                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                                            onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
+                                        >
+                                            <div style={{ color: '#fff', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.2rem' }}>{notif.title}</div>
+                                            <div style={{ color: '#666', fontSize: '0.75rem' }}>{notif.message.substring(0, 60)}...</div>
+                                        </div>
+                                    </Link>
+                                ))}
+                            {userNotifications.filter(n => n.user_id === user?.id).length === 0 && (
                                 <p style={{ color: '#444', textAlign: 'center', padding: '1rem' }}>No new notifications.</p>
                             )}
                         </div>
-                        <Link to="/dashboard/notifications" className="btn btn-secondary" style={{ width: '100%', marginTop: '1.5rem', fontSize: '0.8rem' }}>
-                            Open Notification Center
-                        </Link>
-                    </div>
-
-                    {/* Quick Access */}
-                    <div className="admin-card">
-                        <h3 style={{ color: '#fff', fontSize: '1.1rem', marginBottom: '1.5rem' }}>Quick Actions</h3>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
-                            <Link to="/booking" className="admin-nav-item" style={{ flexDirection: 'column', gap: '0.5rem', textAlign: 'center', padding: '1rem' }}>
-                                <FiCalendar color="var(--color-gold)" size={20} />
-                                <span style={{ fontSize: '0.75rem' }}>Book Now</span>
-                            </Link>
-                            <Link to="/dashboard/chat" className="admin-nav-item" style={{ flexDirection: 'column', gap: '0.5rem', textAlign: 'center', padding: '1rem' }}>
-                                <FiMessageSquare color="#2196f3" size={20} />
-                                <span style={{ fontSize: '0.75rem' }}>Support</span>
+                        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '1.5rem' }}>
+                            <Link to="/dashboard/notifications" className="btn btn-secondary" style={{ width: '100%', textAlign: 'center', fontSize: '0.8rem' }}>
+                                View Full Broadcast Hub
                             </Link>
                         </div>
                     </div>
