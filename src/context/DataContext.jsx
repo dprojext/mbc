@@ -261,7 +261,8 @@ export const DataProvider = ({ children }) => {
                         ...b,
                         fullName: b.full_name || 'Customer',
                         customerId: b.customer_id,
-                        vehicleType: b.vehicle_type
+                        vehicleType: b.vehicle_type,
+                        price: (b.price === 'null' || b.price === 'undefined') ? null : b.price
                     })));
                 }
 
@@ -270,7 +271,7 @@ export const DataProvider = ({ children }) => {
                     const mappedTrx = fetchedTransactions.map(t => ({
                         ...t,
                         user: t.user_name || t.user || 'Guest',
-                        amount: Number(t.amount || 0),
+                        amount: (t.amount === 'null' || t.amount === 'undefined') ? 0 : Number(t.amount || 0),
                         paymentMethod: t.payment_method || 'N/A',
                         referenceNo: t.reference_no || 'N/A',
                         itemId: String(t.item_id || ''),
@@ -610,7 +611,7 @@ export const DataProvider = ({ children }) => {
                 status: newBooking.status,
                 location: newBooking.location,
                 vehicle_type: newBooking.vehicleType || null,
-                price: String(newBooking.price)
+                price: newBooking.price ? String(newBooking.price) : null
             };
             await supabase.from('bookings').insert(dbBooking);
             setBookings(prev => [newBooking, ...prev]);

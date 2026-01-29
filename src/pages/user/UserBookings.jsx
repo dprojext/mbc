@@ -2,16 +2,76 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
-import { FiCalendar, FiClock, FiMapPin, FiTruck, FiCheckCircle, FiXCircle, FiInfo, FiX } from 'react-icons/fi';
+import { FiCalendar, FiClock, FiMapPin, FiTruck, FiCheckCircle, FiXCircle, FiInfo, FiX, FiSearch, FiFilter, FiChevronDown, FiArrowUp, FiArrowDown, FiDollarSign } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 
 const UserBookings = () => {
     const { user } = useAuth();
-    const { bookings = [] } = useData();
+    const { bookings = [], services = [] } = useData();
+    const [searchTerm, setSearchTerm] = React.useState('');
+    const [statusFilter, setStatusFilter] = React.useState('All');
+    const [sortBy, setSortBy] = React.useState('recently'); // 'recently', 'newest', 'oldest', 'price-high', 'price-low'
+    const [isMobile, setIsMobile] = React.useState(window.innerWidth < 768);
 
-    const myBookings = bookings
-        .filter(b => b.customer_id === user?.id || b.email === user?.email)
-        .sort((a, b) => new Date(b.date) - new Date(a.date));
+    React.useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 768);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    const getPrice = (booking) => {
+        const p = booking.price;
+        const isValidPrice = p !== null && p !== undefined && String(p) !== 'null' && String(p) !== 'undefined' && String(p) !== '';
+
+        if (isValidPrice) {
+            return String(p).includes('$') ? p : `$${p}`;
+        }
+        // Fallback to service price
+        const svc = services.find(s => s.title === booking.service);
+        if (svc) {
+            const sp = svc.price;
+            return String(sp).includes('$') ? sp : `$${sp}`;
+        }
+        return '---';
+    };
+
+    const getNumericPrice = (p) => {
+        const val = getPrice({ price: p });
+        if (val === '---') return 0;
+        const matches = val.match(/\d+/);
+        return matches ? Number(matches[0]) : 0;
+    };
+
+    const filteredBookings = React.useMemo(() => {
+        let result = bookings.filter(b => b.customer_id === user?.id || b.email === user?.email);
+
+        // Search
+        if (searchTerm) {
+            const lower = searchTerm.toLowerCase();
+            result = result.filter(b =>
+                b.service.toLowerCase().includes(lower) ||
+                b.location.toLowerCase().includes(lower) ||
+                (b.vehicleType && b.vehicleType.toLowerCase().includes(lower))
+            );
+        }
+
+        // Status Filter
+        if (statusFilter !== 'All') {
+            result = result.filter(b => b.status === statusFilter);
+        }
+
+        // Sort
+        result.sort((a, b) => {
+            if (sortBy === 'recently') return new Date(b.created_at || b.timestamp || 0) - new Date(a.created_at || a.timestamp || 0);
+            if (sortBy === 'newest') return new Date(b.date) - new Date(a.date);
+            if (sortBy === 'oldest') return new Date(a.date) - new Date(b.date);
+            if (sortBy === 'price-high') return getNumericPrice(b.price) - getNumericPrice(a.price);
+            if (sortBy === 'price-low') return getNumericPrice(a.price) - getNumericPrice(b.price);
+            return 0;
+        });
+
+        return result;
+    }, [bookings, user, searchTerm, statusFilter, sortBy, services]);
 
     const getStatusColor = (status) => {
         switch (status) {
@@ -29,19 +89,64 @@ const UserBookings = () => {
 
     return (
         <div className="user-bookings">
-            <header className="admin-flex-between" style={{ marginBottom: '2.5rem' }}>
+            <header className="admin-flex-between stack-on-mobile" style={{ marginBottom: '2.5rem', gap: '1.5rem' }}>
                 <div>
-                    <h1 style={{ color: '#fff', fontSize: '2rem', margin: 0 }}>Booking <span className="gold">History</span></h1>
-                    <p style={{ color: '#888', marginTop: '0.4rem' }}>View and manage your service appointments.</p>
+                    <h1 style={{ color: '#fff', fontSize: isMobile ? '1.8rem' : '2.5rem', margin: 0 }}>Booking <span className="gold">History</span></h1>
+                    <p style={{ color: '#888', marginTop: '0.4rem', fontSize: '0.9rem' }}>View and manage your service appointments.</p>
                 </div>
-                <Link to="/booking" className="btn btn-primary">
+                <Link to="/booking" className="btn btn-primary" style={{ padding: '0.8rem 1.5rem' }}>
                     <FiCalendar style={{ marginRight: '8px' }} /> Schedule New Wash
                 </Link>
             </header>
 
-            {myBookings.length > 0 ? (
+            {/* Filters Bar */}
+            <div className="admin-card" style={{ padding: '1.2rem', marginBottom: '2rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '2fr 1fr 1fr', gap: '1rem' }}>
+                    <div style={{ position: 'relative' }}>
+                        <FiSearch style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#444' }} />
+                        <input
+                            placeholder="Search by service, vehicle, or location..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            style={{ width: '100%', padding: '0.8rem 1rem 0.8rem 2.8rem', background: '#0a0a0a', border: '1px solid #222', borderRadius: '12px', color: '#fff', fontSize: '0.9rem' }}
+                        />
+                    </div>
+                    <div style={{ position: 'relative' }}>
+                        <select
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value)}
+                            style={{ width: '100%', padding: '0.8rem 1rem', background: '#0a0a0a', border: '1px solid #222', borderRadius: '12px', color: '#fff', appearance: 'none' }}
+                        >
+                            <option value="All">All Statuses</option>
+                            <option value="Pending">Pending</option>
+                            <option value="Confirmed">Confirmed</option>
+                            <option value="Approved">Approved</option>
+                            <option value="Completed">Completed</option>
+                            <option value="Rejected">Rejected</option>
+                            <option value="Cancelled">Cancelled</option>
+                        </select>
+                        <FiChevronDown style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#444' }} />
+                    </div>
+                    <div style={{ position: 'relative' }}>
+                        <select
+                            value={sortBy}
+                            onChange={(e) => setSortBy(e.target.value)}
+                            style={{ width: '100%', padding: '0.8rem 1rem', background: '#0a0a0a', border: '1px solid #222', borderRadius: '12px', color: '#fff', appearance: 'none' }}
+                        >
+                            <option value="recently">Recently Booked</option>
+                            <option value="newest">Newest First (Date)</option>
+                            <option value="oldest">Oldest First (Date)</option>
+                            <option value="price-high">Highest Price</option>
+                            <option value="price-low">Lowest Price</option>
+                        </select>
+                        <FiChevronDown style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#444' }} />
+                    </div>
+                </div>
+            </div>
+
+            {filteredBookings.length > 0 ? (
                 <div style={{ display: 'grid', gap: '1.5rem' }}>
-                    {myBookings.map((booking, idx) => (
+                    {filteredBookings.map((booking, idx) => (
                         <motion.div
                             key={booking.id}
                             className="admin-card"
@@ -105,7 +210,7 @@ const UserBookings = () => {
                                     gap: '1rem'
                                 }}>
                                     <div style={{ color: 'var(--color-gold)', fontSize: '1.3rem', fontWeight: 'bold' }}>
-                                        {booking.price ? (booking.price.includes('$') ? booking.price : `$${booking.price}`) : 'Determining...'}
+                                        {getPrice(booking)}
                                     </div>
                                     <div style={{ display: 'flex', gap: '0.8rem' }}>
                                         {(booking.status === 'Approved' || booking.status === 'Confirmed') && (
@@ -244,7 +349,9 @@ const UserBookings = () => {
                                     </div>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                                         <div style={{ color: '#666', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Total Investment</div>
-                                        <div style={{ color: 'var(--color-gold)', fontSize: '1.2rem', fontWeight: '800' }}>{selectedBooking.price ? (selectedBooking.price.includes('$') ? selectedBooking.price : `$${selectedBooking.price}`) : 'Determining...'}</div>
+                                        <div style={{ color: 'var(--color-gold)', fontSize: '1.2rem', fontWeight: '800' }}>
+                                            {getPrice(selectedBooking)}
+                                        </div>
                                     </div>
                                 </div>
                             </div>

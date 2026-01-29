@@ -19,10 +19,30 @@ const UserOverview = () => {
         .filter(b => b.status === 'Confirmed' || b.status === 'Approved' || b.status === 'Pending')
         .sort((a, b) => new Date(a.date) - new Date(b.date))[0];
 
+    const calculateTotalSpent = () => {
+        return myBookings.reduce((acc, booking) => {
+            const p = booking.price;
+            const isValidPrice = p !== null && p !== undefined && String(p) !== 'null' && String(p) !== 'undefined' && String(p) !== '';
+
+            if (isValidPrice) {
+                const matches = String(p).match(/\d+/);
+                return acc + (matches ? Number(matches[0]) : 0);
+            }
+
+            const svc = (data.services || []).find(s => s.title === booking.service);
+            if (svc) {
+                const matches = String(svc.price).match(/\d+/);
+                return acc + (matches ? Number(matches[0]) : 0);
+            }
+
+            return acc;
+        }, 0);
+    };
+
     const stats = [
         { label: 'Upcoming Wash', value: nextWash ? `${nextWash.date} @ ${nextWash.time}` : 'None', icon: <FiCalendar />, color: 'var(--color-gold)' },
         { label: 'Current Plan', value: activeSubscription.toUpperCase(), icon: <FiStar />, color: 'var(--color-gold)' },
-        { label: 'Assets Spent', value: `$${myBookings.reduce((s, b) => s + (Number(b.price) || 0), 0)}`, icon: <FiCreditCard />, color: 'var(--color-gold)' },
+        { label: 'Assets Spent', value: `$${calculateTotalSpent().toLocaleString()}`, icon: <FiCreditCard />, color: 'var(--color-gold)' },
         { label: 'Alerts', value: userNotifications.filter(n => n.user_id === user?.id && !n.read).length, icon: <FiBell />, color: 'var(--color-gold)' }
     ];
 

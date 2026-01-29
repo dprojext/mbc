@@ -20,8 +20,6 @@ const Booking = () => {
     const [showMap, setShowMap] = useState(false);
     const [isLocationConfirmed, setIsLocationConfirmed] = useState(false);
     const [timePeriod, setTimePeriod] = useState('AM');
-    const [userSearchText, setUserSearchText] = useState('');
-    const [filteredUsers, setFilteredUsers] = useState([]);
     const [mapSearchText, setMapSearchText] = useState('');
 
     // Combine previous booking data with saved profile data
@@ -41,7 +39,8 @@ const Booking = () => {
         date: '',
         time: '',
         location: profileAddresses[0] || '',
-        notes: ''
+        notes: '',
+        price: ''
     });
 
     // Robust pre-selection from search params
@@ -59,29 +58,11 @@ const Booking = () => {
 
     const showContactFields = bookingFor === 'other' || (!user?.name || !user?.phone);
 
-    useEffect(() => {
-        if (userSearchText.trim().length > 1) {
-            const filtered = users.filter(u =>
-                (u.name && u.name.toLowerCase().includes(userSearchText.toLowerCase())) ||
-                (u.email && u.email.toLowerCase().includes(userSearchText.toLowerCase()))
-            ).slice(0, 5);
-            setFilteredUsers(filtered);
-        } else {
-            setFilteredUsers([]);
-        }
-    }, [userSearchText, users]);
+    // Unified handling removed as requested
 
-    const selectUserFromSearch = (u) => {
-        setFormData(prev => ({
-            ...prev,
-            fullName: u.name || '',
-            email: u.email || '',
-            phone: u.phone || ''
-        }));
-        setUserSearchText('');
-        setFilteredUsers([]);
-        setBookingFor('other'); // Switch to 'other' so fields are visible
-    };
+
+    // selectUserFromSearch removed
+
 
     useEffect(() => {
         if (bookingFor === 'myself') {
@@ -97,7 +78,17 @@ const Booking = () => {
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+
+        // Specialized logic for service selection to capture price
+        if (name === 'service') {
+            const selectedService = services.find(s => s.title === value);
+            const selectedPlan = plans.find(p => p.name === value);
+            const price = selectedService ? selectedService.price : (selectedPlan ? selectedPlan.price : '');
+            setFormData(prev => ({ ...prev, [name]: value, price }));
+        } else {
+            setFormData(prev => ({ ...prev, [name]: value }));
+        }
+
         if (name === 'location') setIsLocationConfirmed(false);
     };
 
@@ -188,44 +179,8 @@ const Booking = () => {
                         </div>
 
                         <form onSubmit={handleSubmit}>
-                            {/* Admin Search for Users */}
-                            {user?.role?.toLowerCase() === 'admin' && (
-                                <div style={{ marginBottom: '2rem', position: 'relative' }}>
-                                    <label style={{ color: 'var(--color-gold)', fontSize: '0.7rem', fontWeight: '900', textTransform: 'uppercase', marginBottom: '0.8rem', display: 'block' }}>Search Member Account</label>
-                                    <div style={{ position: 'relative' }}>
-                                        <FiSearch style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#555' }} />
-                                        <input
-                                            placeholder="Find user by name or email..."
-                                            value={userSearchText}
-                                            onChange={e => setUserSearchText(e.target.value)}
-                                            style={{ width: '100%', padding: '1rem 1rem 1rem 2.8rem', background: 'rgba(201,169,106,0.05)', border: '1px solid rgba(201,169,106,0.2)', borderRadius: '12px', color: '#fff', outline: 'none' }}
-                                        />
-                                    </div>
-                                    <AnimatePresence>
-                                        {filteredUsers.length > 0 && (
-                                            <motion.div
-                                                initial={{ opacity: 0, y: -10 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                exit={{ opacity: 0, y: -10 }}
-                                                style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#1a1a1a', border: '1px solid #333', borderRadius: '10px', marginTop: '0.4rem', zIndex: 100, overflow: 'hidden' }}
-                                            >
-                                                {filteredUsers.map(u => (
-                                                    <div
-                                                        key={u.id}
-                                                        onClick={() => selectUserFromSearch(u)}
-                                                        style={{ padding: '0.8rem 1rem', cursor: 'pointer', borderBottom: '1px solid #222', display: 'flex', flexDirection: 'column' }}
-                                                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(201,169,106,0.1)'}
-                                                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                                                    >
-                                                        <span style={{ color: '#fff', fontSize: '0.9rem', fontWeight: 'bold' }}>{u.name}</span>
-                                                        <span style={{ color: '#666', fontSize: '0.75rem' }}>{u.email}</span>
-                                                    </div>
-                                                ))}
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
-                                </div>
-                            )}
+                            {/* Booking For Selection remains */}
+
 
                             {/* Selection: Myself vs Other */}
                             <div style={{ marginBottom: '2.5rem' }}>
@@ -294,12 +249,11 @@ const Booking = () => {
                                 {bookingFor === 'myself' && vehicleChoice === 'previous' && prevVehicles.length > 0 ? (
                                     <div style={{ position: 'relative' }}>
                                         <select name="vehicleType" value={formData.vehicleType} onChange={handleChange} required
-                                            style={{ width: '100%', padding: '0.8rem 1rem 0.8rem 2.8rem', background: '#111', border: '1px solid #333', borderRadius: '10px', color: '#fff', appearance: 'none', textAlign: 'left', textAlignLast: 'left' }}
+                                            style={{ width: '100%', padding: '0.8rem 1rem', background: '#111', border: '1px solid #333', borderRadius: '10px', color: '#fff', appearance: 'none', textAlign: 'left', textAlignLast: 'left' }}
                                         >
                                             <option value="">Choose vehicle...</option>
                                             {prevVehicles.map(v => <option key={v} value={v}>{v}</option>)}
                                         </select>
-                                        <FiTruck style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-gold)' }} />
                                         <FiChevronDown style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#555' }} />
                                     </div>
                                 ) : (
@@ -316,14 +270,13 @@ const Booking = () => {
                                 <label style={{ color: '#888', fontSize: '0.75rem', marginBottom: '0.5rem', display: 'block' }}>Service Type</label>
                                 <div style={{ position: 'relative' }}>
                                     <select name="service" value={formData.service} onChange={handleChange} required
-                                        style={{ width: '100%', padding: '0.8rem 1rem 0.8rem 2.8rem', background: '#111', border: '1px solid #333', borderRadius: '10px', color: '#fff', appearance: 'none', textAlign: 'left', textAlignLast: 'left' }}
+                                        style={{ width: '100%', padding: '0.8rem 1rem', background: '#111', border: '1px solid #333', borderRadius: '10px', color: '#fff', appearance: 'none', textAlign: 'left', textAlignLast: 'left' }}
                                     >
                                         <option value="">Choose a treatment...</option>
                                         {services.map(s => <option key={s.id} value={s.title}>{s.title} ({s.price})</option>)}
                                         {plans.map(p => <option key={p.id} value={p.name}>{p.name} Membership</option>)}
                                     </select>
-                                    <FiCheckCircle style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#555' }} />
-                                    <FiChevronDown style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#555' }} />
+                                    <FiChevronDown style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#444' }} />
                                 </div>
                             </div>
 

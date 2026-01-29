@@ -79,12 +79,12 @@ const UserDashboard = () => {
             <main style={{ flex: 1, padding: '2rem 0 4rem', position: 'relative' }}>
                 <div className="section-container" style={{ maxWidth: '1400px', margin: '0 auto' }}>
                     {/* Mobile Only Greeting */}
-                    <div className="mobile-only-block" style={{ marginBottom: '2rem', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div className="mobile-only-block" style={{ marginBottom: '2.8rem', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
                             <h2 style={{ fontSize: isMobile ? '1.4rem' : '1.8rem', fontWeight: '800', margin: 0 }}>
                                 {new Date().getHours() < 12 ? 'Good Morning' : new Date().getHours() < 17 ? 'Good Afternoon' : 'Good Evening'}, <span className="gold">{user?.name && !user.name.includes('@') ? user.name.split(' ')[0] : 'MBC'}</span>
                             </h2>
-                            <p style={{ color: '#555', fontSize: '0.85rem', marginTop: '0.4rem' }}>Welcome back to your executive dashboard.</p>
+                            <p style={{ color: '#555', fontSize: '0.85rem', marginTop: '0.2rem' }}>Welcome back to your executive dashboard.</p>
                         </div>
                         <button
                             onClick={() => navigate('/dashboard/notifications')}
@@ -145,12 +145,11 @@ const UserDashboard = () => {
                     }
                     .section-container {
                         padding: 0 0.5rem !important;
-                    }
-                    .admin-card {
-                        padding: 1rem !important;
+                        margin-top: -4.2rem !important;
                     }
                     main {
-                        padding: 1rem 0 5rem !important;
+                        padding: 0 0 5rem !important;
+                        margin: 0 !important;
                     }
                 }
                 .dashboard-content-fade-in {

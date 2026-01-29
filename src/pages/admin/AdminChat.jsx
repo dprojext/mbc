@@ -11,6 +11,7 @@ const AdminChat = () => {
     const [editingMsgId, setEditingMsgId] = useState(null);
     const [deletingMsgId, setDeletingMsgId] = useState(null);
     const [editValue, setEditValue] = useState('');
+    const [activeTab, setActiveTab] = useState('chats'); // 'chats' or 'problems'
     const messagesEndRef = useRef(null);
 
     // Auto-scroll to bottom when messages change
@@ -81,12 +82,17 @@ const AdminChat = () => {
         }));
 
         return [...existingConvos, ...newContacts].filter(c => {
-            const name = c.customerName || c.customer_name || '';
-            const msg = c.lastMessage || c.last_message || '';
-            return name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                msg.toLowerCase().includes(searchQuery.toLowerCase());
+            const name = (c.customerName || c.customer_name || '').toLowerCase();
+            const msg = (c.lastMessage || c.last_message || '').toLowerCase();
+            const query = searchQuery.toLowerCase();
+            const matchesSearch = name.includes(query) || msg.includes(query);
+
+            if (activeTab === 'problems') {
+                return matchesSearch && msg.includes('[problem reported]');
+            }
+            return matchesSearch;
         });
-    }, [conversations, users, searchQuery]);
+    }, [conversations, users, searchQuery, activeTab]);
 
     const filteredConversations = activeConvoList;
 
@@ -115,11 +121,11 @@ const AdminChat = () => {
                 overflow: 'hidden'
             }}>
                 <div style={{ padding: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <h2 style={{ color: '#fff', fontSize: '1.3rem', margin: '0 0 1rem 0', fontFamily: 'var(--font-heading)' }}>Messages</h2>
-                    <div style={{ position: 'relative' }}>
+                    <h2 style={{ color: '#fff', fontSize: '1.2rem', margin: '0 0 1rem 0', fontWeight: '800' }}>Communication Hub</h2>
+                    <div style={{ position: 'relative', marginBottom: '1.2rem' }}>
                         <input
                             type="text"
-                            placeholder="Search conversations..."
+                            placeholder="Search..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             style={{
@@ -134,6 +140,16 @@ const AdminChat = () => {
                             }}
                         />
                         <FiSearch style={{ position: 'absolute', left: '0.8rem', top: '50%', transform: 'translateY(-50%)', color: '#555' }} />
+                    </div>
+                    <div style={{ display: 'flex', gap: '1rem' }}>
+                        <button
+                            onClick={() => setActiveTab('chats')}
+                            style={{ padding: '0.5rem 0', background: 'none', border: 'none', borderBottom: activeTab === 'chats' ? '2px solid var(--color-gold)' : '2px solid transparent', color: activeTab === 'chats' ? '#fff' : '#444', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer', flex: 1 }}
+                        >CORRESPONDENCE</button>
+                        <button
+                            onClick={() => setActiveTab('problems')}
+                            style={{ padding: '0.5rem 0', background: 'none', border: 'none', borderBottom: activeTab === 'problems' ? '2px solid #ff4444' : '2px solid transparent', color: activeTab === 'problems' ? '#ff4444' : '#444', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer', flex: 1 }}
+                        >CRITICAL ISSUES</button>
                     </div>
                 </div>
 

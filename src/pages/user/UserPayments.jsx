@@ -11,10 +11,23 @@ import { useNavigate } from 'react-router-dom';
 
 const UserPayments = () => {
     const { user } = useAuth();
-    const { bookings = [], transactions = [], settings, services = [], addTransaction, addAdminNotification } = useData() || {};
+    const {
+        bookings = [],
+        transactions = [],
+        conversations = [],
+        settings,
+        services = [],
+        addTransaction,
+        addAdminNotification,
+        addConversation,
+        sendMessage
+    } = useData() || {};
     const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedTrx, setSelectedTrx] = useState(null);
+    const [showDocPreview, setShowDocPreview] = useState(false);
+    const [isSupporting, setIsSupporting] = useState(false);
+    const [supportProblem, setSupportProblem] = useState('');
 
     const getNumericPrice = (p) => {
         if (p === null || p === undefined || String(p) === 'null' || p === '') return 0;
@@ -73,7 +86,7 @@ const UserPayments = () => {
         ).map(b => {
             // Inject price from services if missing in booking object
             const svc = services.find(s => s.title === b.service);
-            const rawPrice = (b.price !== null && b.price !== undefined && String(b.price) !== 'null') ? b.price : (svc ? svc.price : 0);
+            const rawPrice = (b.price !== null && b.price !== undefined && String(b.price) !== 'null' && String(b.price) !== 'undefined') ? b.price : (svc ? svc.price : 0);
             return { ...b, price: rawPrice };
         });
     }, [bookings, transactions, user, services]);
@@ -95,7 +108,10 @@ const UserPayments = () => {
         const booking = bookings.find(b => String(b.id) === String(paymentForm.bookingId));
         const gateway = enabledGateways.find(g => g.id === paymentForm.gatewayId);
         const svc = services.find(s => s.title === booking.service);
-        const finalPrice = getNumericPrice(booking.price || (svc ? svc.price : 0));
+        // Check if booking has a valid price, otherwise fallback to service price or 0
+        const bookingPrice = (booking.price && String(booking.price) !== 'null' && String(booking.price) !== 'undefined') ? booking.price : null;
+        const svcPrice = svc ? svc.price : 0;
+        const finalPrice = getNumericPrice(bookingPrice || svcPrice);
 
         // Create transaction record
         const newTrx = {
@@ -133,7 +149,7 @@ const UserPayments = () => {
 
     return (
         <div className="user-payments" style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box', overflowX: 'hidden' }}>
-            <header style={{ marginBottom: isMobile ? '1.2rem' : '2.5rem' }}>
+            <header style={{ marginBottom: isMobile ? '1.2rem' : '2.5rem', textAlign: isMobile ? 'center' : 'left' }}>
                 <h1 style={{ color: '#fff', fontSize: isMobile ? '1.6rem' : '2.5rem', margin: 0, fontWeight: '900' }}>Financial <span className="gold">Ledger</span></h1>
                 <p style={{ color: '#888', marginTop: '0.2rem', fontSize: isMobile ? '0.75rem' : '1rem' }}>Manage your payments and settlement history.</p>
             </header>
@@ -241,7 +257,7 @@ const UserPayments = () => {
                                     boxSizing: 'border-box',
                                     width: '100%'
                                 }}>
-                                    <div style={{ marginBottom: '0.8rem' }}>
+                                    <div style={{ marginBottom: '0.8rem', textAlign: isMobile ? 'center' : 'left' }}>
                                         <div style={{ color: '#fff', fontWeight: '700', fontSize: isMobile ? '0.95rem' : '1.1rem', marginBottom: '0.15rem' }}>{booking.service}</div>
                                         <div style={{ color: '#666', fontSize: '0.7rem' }}>Approved for {booking.date}</div>
                                     </div>
@@ -313,7 +329,12 @@ const UserPayments = () => {
                             </thead>
                             <tbody>
                                 {myTransactions.length > 0 ? (
-                                    myTransactions.filter(t => String(t.id || '').toLowerCase().includes(searchTerm.toLowerCase())).map(t => (
+                                    myTransactions.filter(t =>
+                                        String(t.id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                        String(t.item || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                        String(t.amount || '').includes(searchTerm) ||
+                                        String(t.status || '').toLowerCase().includes(searchTerm.toLowerCase())
+                                    ).map(t => (
                                         <tr
                                             key={t.id}
                                             onClick={() => setSelectedTrx(t)}
@@ -325,7 +346,9 @@ const UserPayments = () => {
                                                 {isMobile ? `TRX...${String(t.id || '').slice(-4)}` : t.id}
                                             </td>
                                             <td style={{ padding: '1rem', color: '#fff', fontWeight: '800' }}>${t.amount}</td>
-                                            <td style={{ padding: '1rem', color: '#888', fontSize: '0.85rem' }}>{t.paymentMethod}</td>
+                                            <td style={{ padding: '1rem', color: '#888', fontSize: '0.85rem' }}>
+                                                {(t.status === 'Pending' || t.status === 'Denied' || t.status === 'Rejected') ? '—' : t.paymentMethod}
+                                            </td>
                                             <td style={{ padding: '1rem' }}>
                                                 <span style={{
                                                     padding: '0.3rem 0.6rem', borderRadius: '4px', fontSize: '0.6rem', fontWeight: 'bold',
@@ -374,9 +397,94 @@ const UserPayments = () => {
                 <div className="admin-card">
                     <h3 style={{ color: '#fff', fontSize: '1rem', marginBottom: '1rem' }}>Billing Issues?</h3>
                     <p style={{ color: '#444', fontSize: '0.8rem', marginBottom: '1.5rem' }}>If you encounter any issues during the settlement process, please contact our concierge team immediately.</p>
-                    <button className="btn btn-secondary" style={{ width: '100%' }}>OPEN SUPPORT TICKET</button>
+                    <button
+                        className="btn btn-secondary"
+                        style={{ width: '100%' }}
+                        onClick={() => setIsSupporting(true)}
+                    >
+                        OPEN SUPPORT TICKET
+                    </button>
                 </div>
             </div>
+
+            {/* Support Ticket Modal */}
+            <AnimatePresence>
+                {isSupporting && (
+                    <div className="modal active" onClick={() => setIsSupporting(false)} style={{ zIndex: 3000, background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(10px)' }}>
+                        <motion.div
+                            className="modal-content glass-modal"
+                            onClick={e => e.stopPropagation()}
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            style={{ maxWidth: '500px', width: '95%', padding: '2.5rem', borderRadius: '30px', background: '#0d0d0d', border: '1px solid #1a1a1a' }}
+                        >
+                            <h2 style={{ color: '#fff', fontSize: '1.5rem', marginBottom: '0.5rem', fontWeight: '900' }}>Executive <span className="gold">Support</span></h2>
+                            <p style={{ color: '#666', fontSize: '0.85rem', marginBottom: '2rem' }}>Please describe the issue you are encountering with your settlement records.</p>
+
+                            <textarea
+                                value={supportProblem}
+                                onChange={e => setSupportProblem(e.target.value)}
+                                placeholder="Describe the problem in detail..."
+                                style={{ width: '100%', minHeight: '150px', padding: '1.2rem', background: 'rgba(255,255,255,0.02)', border: '1px solid #222', borderRadius: '15px', color: '#fff', marginBottom: '2rem', resize: 'none' }}
+                            />
+
+                            <div style={{ display: 'flex', gap: '1rem' }}>
+                                <button
+                                    className="btn btn-primary"
+                                    style={{ flex: 1, padding: '1rem' }}
+                                    onClick={async () => {
+                                        if (!supportProblem.trim()) return;
+                                        setLoading(true);
+                                        try {
+                                            // Find or create conversation
+                                            let targetConvo = conversations.find(c => c.customerId === user.id || c.customer_id === user.id);
+                                            let cId = targetConvo?.id;
+
+                                            if (!cId) {
+                                                const newC = await addConversation({
+                                                    customerName: user.name || user.email,
+                                                    customerId: user.id,
+                                                    lastMessage: `[PROBLEM REPORTED] ${supportProblem.slice(0, 50)}...`,
+                                                    lastMessageTime: new Date().toISOString()
+                                                });
+                                                cId = newC.id;
+                                            }
+
+                                            // Send actual message
+                                            await sendMessage({
+                                                conversationId: cId,
+                                                sender: 'customer',
+                                                text: `[PROBLEM REPORTED] ${supportProblem}`,
+                                                timestamp: new Date().toISOString()
+                                            });
+
+                                            // Also send administrative notification for high visibility
+                                            await addAdminNotification({
+                                                type: 'message',
+                                                title: 'CRITICAL: Billing Issue',
+                                                message: `User ${user.name || user.email} authorized a support ticket.`,
+                                                data: { userId: user.id, isProblem: true, problem: supportProblem }
+                                            });
+
+                                            setIsSupporting(false);
+                                            setSupportProblem('');
+                                            alert("Strategic support ticket logged. Access your messages to track status.");
+                                        } catch (err) {
+                                            console.error(err);
+                                            alert("Failed to synchronize support ticket. Please try again.");
+                                        } finally {
+                                            setLoading(false);
+                                        }
+                                    }}
+                                >
+                                    LOG ISSUE
+                                </button>
+                                <button className="btn btn-secondary" style={{ flex: 0.5 }} onClick={() => setIsSupporting(false)}>CANCEL</button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
 
             {/* Payment Modal */}
             <AnimatePresence>
@@ -511,24 +619,26 @@ const UserPayments = () => {
                                 </div>
                             )}
                         </motion.div>
-                    </div>
+                    </div >
                 )}
-            </AnimatePresence>
+            </AnimatePresence >
 
             <AnimatePresence>
                 {selectedTrx && (
-                    <div className="modal active" onClick={() => setSelectedTrx(null)}>
+                    <div className="modal active" onClick={() => setSelectedTrx(null)} style={{ zIndex: 1000 }}>
                         <motion.div
                             className="modal-content glass-modal"
                             onClick={e => e.stopPropagation()}
                             initial={{ opacity: 0, y: 30 }}
                             animate={{ opacity: 1, y: 0 }}
                             style={{
-                                maxWidth: '460px',
-                                padding: '2.5rem',
+                                maxWidth: '450px', // Balanced width: wider than before but not 700px
+                                width: '95%',
+                                padding: isMobile ? '1.5rem' : '2.5rem',
                                 borderRadius: '35px',
                                 background: '#0a0a0a',
-                                border: '1px solid rgba(255,255,255,0.05)'
+                                border: '1px solid rgba(255,255,255,0.05)',
+                                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
                             }}
                         >
                             <div className="admin-flex-between" style={{ marginBottom: '2rem' }}>
@@ -546,106 +656,256 @@ const UserPayments = () => {
                             <div style={{ background: '#050505', padding: '2rem', borderRadius: '20px', border: '1px solid #111', display: 'flex', flexDirection: 'column', gap: '1.2rem', position: 'relative', overflow: 'hidden' }}>
                                 <div style={{ position: 'absolute', top: '-20px', right: '-20px', fontSize: '8rem', color: 'rgba(255,255,255,0.02)', fontWeight: '900', zIndex: 0 }}>MBC</div>
                                 <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span style={{ color: '#444', fontSize: '0.8rem' }}>Originator</span><span style={{ color: '#fff', fontWeight: 'bold' }}>{selectedTrx.user}</span></div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span style={{ color: '#444', fontSize: '0.8rem' }}>Category</span><span style={{ color: '#fff' }}>{selectedTrx.category}</span></div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span style={{ color: '#444', fontSize: '0.8rem' }}>Item</span><span style={{ color: 'var(--color-gold)' }}>{selectedTrx.item || selectedTrx.type || 'Executive Service'}</span></div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span style={{ color: '#444', fontSize: '0.8rem' }}>Amount</span><span style={{ color: '#fff', fontWeight: '900', fontSize: '1.2rem' }}>${selectedTrx.amount}</span></div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <span style={{ color: '#444', fontSize: '0.8rem' }}>Method / Ref</span>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
+                                        <span style={{ color: '#444', fontSize: '0.65rem', fontWeight: '900', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Originator</span>
+                                        <span style={{ color: '#fff', fontWeight: '800', textAlign: 'right' }}>{selectedTrx.user}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
+                                        <span style={{ color: '#444', fontSize: '0.65rem', fontWeight: '900', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Category</span>
+                                        <span style={{ color: '#fff', textAlign: 'right' }}>{selectedTrx.category}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
+                                        <span style={{ color: '#444', fontSize: '0.65rem', fontWeight: '900', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Executive Item</span>
+                                        <span style={{ color: 'var(--color-gold)', fontWeight: '700', textAlign: 'right' }}>{selectedTrx.item || selectedTrx.type || 'Executive Service'}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
+                                        <span style={{ color: '#444', fontSize: '0.65rem', fontWeight: '900', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Settlement Amount</span>
+                                        <span style={{ color: '#fff', fontWeight: '900', fontSize: '1.2rem', textAlign: 'right' }}>${selectedTrx.amount}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
+                                        <span style={{ color: '#444', fontSize: '0.65rem', fontWeight: '900', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Method / Ref</span>
                                         <div style={{ textAlign: 'right' }}>
-                                            <div style={{ color: '#fff' }}>{selectedTrx.paymentMethod}</div>
-                                            <div style={{ color: '#555', fontSize: '0.7rem', fontFamily: 'monospace' }}>{selectedTrx.referenceNo || 'N/A'}</div>
+                                            <div style={{ color: '#fff', fontWeight: '600' }}>
+                                                {(selectedTrx.status === 'Pending' || selectedTrx.status === 'Denied' || selectedTrx.status === 'Rejected') ? '—' : selectedTrx.paymentMethod}
+                                            </div>
+                                            <div style={{ color: '#555', fontSize: '0.7rem', fontFamily: 'monospace', marginTop: '0.2rem', wordBreak: 'break-all' }}>
+                                                {(selectedTrx.status === 'Pending' || selectedTrx.status === 'Denied' || selectedTrx.status === 'Rejected') ? '—' : (selectedTrx.referenceNo || 'N/A')}
+                                            </div>
                                         </div>
                                     </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span style={{ color: '#444', fontSize: '0.8rem' }}>Settlement Date</span><span style={{ color: '#666' }}>{selectedTrx.date || new Date(selectedTrx.timestamp).toLocaleDateString()}</span></div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
+                                        <span style={{ color: '#444', fontSize: '0.65rem', fontWeight: '900', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Settlement Date</span>
+                                        <span style={{ color: '#888', textAlign: 'right' }}>{selectedTrx.date || new Date(selectedTrx.timestamp).toLocaleDateString()}</span>
+                                    </div>
                                 </div>
                             </div>
 
                             <div style={{ display: 'flex', gap: '0.8rem', marginTop: '2rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-                                {(selectedTrx.status === 'Completed' || selectedTrx.status === 'Paid') && (
+                                {(selectedTrx.status === 'Completed' || selectedTrx.status === 'Paid' || selectedTrx.status === 'Pending') && (
                                     <button
                                         className="btn btn-primary"
                                         style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '0.6rem 1rem', fontSize: '0.8rem' }}
+                                        onClick={() => setShowDocPreview(true)}
+                                    >
+                                        <FiActivity /> VIEW DOCUMENT
+                                    </button>
+                                )}
+                                <button className="btn btn-secondary" style={{ padding: '0.6rem 1rem', fontSize: '0.8rem' }} onClick={() => setSelectedTrx(null)}>DISMISS</button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {showDocPreview && selectedTrx && (
+                    <div
+                        className="modal active"
+                        onClick={() => setShowDocPreview(false)}
+                        style={{
+                            zIndex: 9999, // Absolute priority: Guaranteed to be on top of everything
+                            position: 'fixed',
+                            inset: 0,
+                            background: 'rgba(0,0,0,0.98)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backdropFilter: 'blur(15px)'
+                        }}
+                    >
+                        <motion.div
+                            className="modal-content glass-modal-large"
+                            onClick={e => e.stopPropagation()}
+                            initial={{ opacity: 0, scale: 0.9, y: 30 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 30 }}
+                            style={{
+                                maxWidth: '900px',
+                                width: '95%',
+                                padding: '0',
+                                borderRadius: '35px',
+                                background: '#080808',
+                                border: '1px solid rgba(255,255,255,0.05)',
+                                overflow: 'hidden',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                maxHeight: '95vh',
+                                boxShadow: '0 0 100px rgba(0,0,0,1)'
+                            }}
+                        >
+                            {/* Toolbar */}
+                            <div style={{ padding: isMobile ? '0.8rem 1rem' : '1rem 2rem', background: '#0a0a0a', borderBottom: '1px solid #222', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div style={{ color: '#fff', fontSize: isMobile ? '0.65rem' : '0.8rem', fontWeight: 'bold' }}>MBC Executive Document Explorer</div>
+                                <div style={{ display: 'flex', gap: isMobile ? '0.5rem' : '1rem' }}>
+                                    <button
                                         onClick={async () => {
-                                            const invoiceDate = selectedTrx.date || new Date(selectedTrx.timestamp).toLocaleDateString();
-                                            const container = document.createElement('div');
-                                            container.style.position = 'fixed';
-                                            container.style.top = '-10000px';
-                                            container.style.left = '-10000px';
-                                            container.style.width = '1200px';
-                                            container.style.background = '#fff';
-                                            container.innerHTML = `
-                                                 <div style="padding: 100px; font-family: 'Montserrat', sans-serif; color: #1a1a1a; min-height: 1600px; position: relative; background: #fff; overflow: hidden;">
-                                                     <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 180px; color: rgba(0,0,0,0.02); pointer-events: none; z-index: 1; font-weight: 900; white-space: nowrap; text-transform: uppercase;">MBC CARE</div>
-                                                     <div style="position: relative; z-index: 2;">
-                                                         <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #c9a96a; padding-bottom: 40px; margin-bottom: 60px;">
-                                                             <div style="font-size: 38px; font-weight: bold; color: #000; letter-spacing: 2px;">METRO BLACKLINE CARE</div>
-                                                             <div style="font-size: 32px; font-weight: 700; color: #c9a96a; text-transform: uppercase; letter-spacing: 4px;">RECEIPT</div>
-                                                         </div>
-                                                         <div style="display: flex; justify-content: space-between; margin-bottom: 80px;">
-                                                             <div>
-                                                                 <div style="font-size: 10px; font-weight: 900; color: #aaa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">Customer</div>
-                                                                 <div style="font-size: 24px; font-weight: 700; color: #000;">${selectedTrx.user}</div>
-                                                             </div>
-                                                             <div style="text-align: right;">
-                                                                 <div style="font-size: 10px; font-weight: 900; color: #aaa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Order Ref</div>
-                                                                 <div style="font-size: 16px; font-weight: 700; color: #000;">${selectedTrx.id}</div>
-                                                                 <div style="margin-top: 20px; font-size: 10px; font-weight: 900; color: #aaa; text-transform: uppercase;">Dated</div>
-                                                                 <div style="font-size: 18px; font-weight: 700; color: #000;">${invoiceDate}</div>
-                                                             </div>
-                                                         </div>
-                                                         <table style="width: 100%; border-collapse: collapse; margin-bottom: 60px;">
-                                                             <thead>
-                                                                 <tr style="border-bottom: 1px solid #eee;">
-                                                                     <th style="padding: 20px 0; text-align: left; font-size: 10px; font-weight: 900; color: #aaa; text-transform: uppercase;">Description</th>
-                                                                     <th style="padding: 20px 0; text-align: right; font-size: 10px; font-weight: 900; color: #aaa; text-transform: uppercase;">Method</th>
-                                                                     <th style="padding: 20px 0; text-align: right; font-size: 10px; font-weight: 900; color: #aaa; text-transform: uppercase;">Amount</th>
-                                                                 </tr>
-                                                             </thead>
-                                                             <tbody>
-                                                                 <tr>
-                                                                     <td style="padding: 40px 0; font-size: 20px; color: #000; font-weight: 600;">${selectedTrx.item || selectedTrx.type || 'Executive Service'}</td>
-                                                                     <td style="padding: 40px 0; text-align: right; font-size: 18px; color: #666;">${selectedTrx.paymentMethod}</td>
-                                                                     <td style="padding: 40px 0; text-align: right; font-size: 24px; color: #000; font-weight: 700;">$${selectedTrx.amount}</td>
-                                                                 </tr>
-                                                             </tbody>
-                                                         </table>
-                                                         <div style="display: flex; justify-content: flex-end; border-top: 4px solid #000; padding-top: 40px;">
-                                                             <div style="text-align: right;">
-                                                                 <div style="font-size: 12px; font-weight: 900; color: #aaa; text-transform: uppercase; margin-bottom: 8px;">Total Settlement</div>
-                                                                 <div style="font-size: 52px; font-weight: 900; color: #c9a96a;">$${selectedTrx.amount}.00</div>
-                                                             </div>
-                                                         </div>
-                                                         <div style="margin-top: 100px; padding: 40px; background: #f9f9f9; border-left: 4px solid #c9a96a;">
-                                                             <div style="font-size: 10px; font-weight: 900; color: #aaa; text-transform: uppercase; margin-bottom: 8px;">Official Status</div>
-                                                             <div style="font-size: 20px; font-weight: 700; color: #4caf50;">FULLY SETTLED</div>
-                                                         </div>
-                                                     </div>
-                                                 </div>
-                                             `;
-                                            document.body.appendChild(container);
+                                            const element = document.getElementById('mbc-invoice-render');
                                             try {
-                                                const canvas = await (await import('html2canvas')).default(container, {
-                                                    scale: 2,
+                                                const canvas = await (await import('html2canvas')).default(element, {
+                                                    scale: 3, // High DPI scaling
                                                     useCORS: true,
-                                                    backgroundColor: '#ffffff'
+                                                    backgroundColor: '#ffffff',
+                                                    width: 794, // Standard A4 ratio base
+                                                    height: 1123
                                                 });
                                                 const img = canvas.toDataURL('image/png');
                                                 const a = document.createElement('a');
                                                 a.href = img;
-                                                a.download = `MBC-INVOICE-${selectedTrx.id}.png`;
+                                                const isPending = selectedTrx.status === 'Pending';
+                                                a.download = `MBC-${isPending ? 'INVOICE' : 'RECEIPT'}-${selectedTrx.id}.png`;
                                                 a.click();
-                                            } catch (err) {
-                                                console.error("Capture Failed:", err);
-                                            } finally {
-                                                document.body.removeChild(container);
-                                            }
+                                            } catch (err) { console.error("Capture Failed:", err); }
                                         }}
+                                        className="btn btn-primary"
+                                        style={{ padding: '0.5rem 1rem', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
                                     >
-                                        <FiDownload /> DOWNLOAD INVOICE
+                                        <FiDownload /> Export PNG
                                     </button>
-                                )}
-                                <button className="btn btn-secondary" style={{ padding: '0.6rem 1rem', fontSize: '0.8rem' }} onClick={() => setSelectedTrx(null)}>DISMISS</button>
+                                    <button onClick={() => setShowDocPreview(false)} style={{ color: '#666', background: 'none', border: 'none', cursor: 'pointer' }}><FiX size={20} /></button>
+                                </div>
+                            </div>
+
+                            {/* Scrollable Document Content */}
+                            <div style={{ overflowY: 'auto', padding: isMobile ? '1rem' : '3rem', background: '#111' }}>
+                                <div id="mbc-invoice-render" style={{
+                                    background: '#ffffff',
+                                    padding: isMobile ? '2rem 1.5rem' : '4rem',
+                                    color: '#000',
+                                    fontFamily: "'Inter', sans-serif",
+                                    position: 'relative',
+                                    width: isMobile ? '100%' : '794px', // A4 width at 96dpi for web preview
+                                    margin: '0 auto',
+                                    minHeight: isMobile ? 'auto' : '1123px',
+                                    border: '1px solid #ddd',
+                                    borderRadius: '2px',
+                                    boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
+                                }}>
+                                    {/* Design Elements */}
+                                    <div style={{ position: 'absolute', top: '0', right: '0', width: isMobile ? '150px' : '300px', height: isMobile ? '150px' : '300px', background: 'radial-gradient(circle, rgba(201,169,106,0.1) 0%, transparent 70%)', pointerEvents: 'none' }} />
+
+                                    {/* Appealing Pro-Forma Header Badge */}
+                                    {selectedTrx.status === 'Pending' && (
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: '0',
+                                            left: '0',
+                                            right: '0',
+                                            background: 'linear-gradient(90deg, #c9a96a 0%, #b89850 100%)',
+                                            color: '#000',
+                                            padding: '0.6rem',
+                                            textAlign: 'center',
+                                            fontSize: '0.7rem',
+                                            fontWeight: '900',
+                                            textTransform: 'uppercase',
+                                            letterSpacing: '0.5em',
+                                            boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+                                        }}>
+                                            Official Pro-Forma Issuance
+                                        </div>
+                                    )}
+
+                                    {/* Header Section */}
+                                    <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'center' : 'flex-start', marginTop: selectedTrx.status === 'Pending' ? '3rem' : '0', marginBottom: isMobile ? '3rem' : '5rem', gap: '2rem' }}>
+                                        <div style={{ textAlign: isMobile ? 'center' : 'left' }}>
+                                            <div style={{ color: 'var(--color-gold)', fontSize: isMobile ? '1.8rem' : '2.5rem', fontWeight: '900', letterSpacing: '-0.02em', marginBottom: '0.5rem' }}>MBC</div>
+                                            <div style={{ color: '#666', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.2em' }}>Metro Blackline Care</div>
+                                        </div>
+                                        <div style={{ textAlign: isMobile ? 'center' : 'right' }}>
+                                            <div style={{ color: 'var(--color-gold)', fontSize: '0.65rem', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.5rem' }}>Document Type</div>
+                                            <div style={{ color: '#000', fontSize: isMobile ? '1.4rem' : '1.8rem', fontWeight: '800' }}>
+                                                {selectedTrx.status === 'Pending' ? 'Invoice' : 'Receipt'}
+                                            </div>
+                                            <div style={{ color: '#999', fontSize: '0.7rem', marginTop: '0.5rem' }}>Ref: {selectedTrx.id}</div>
+                                        </div>
+                                    </div>
+
+                                    {/* Account Info Grid */}
+                                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '1rem' : '4rem', marginBottom: isMobile ? '3rem' : '5rem' }}>
+                                        <div style={{ padding: isMobile ? '1.2rem' : '2rem', background: '#fcfcfc', borderRadius: '8px', border: '1px solid #eee' }}>
+                                            <div style={{ color: '#999', fontSize: '0.6rem', fontWeight: '900', textTransform: 'uppercase', marginBottom: '1.2rem', letterSpacing: '0.1em' }}>Billing Information</div>
+                                            <div style={{ color: '#000', fontSize: '1.1rem', fontWeight: '700', marginBottom: '0.4rem' }}>{selectedTrx.user}</div>
+                                            <div style={{ color: '#666', fontSize: '0.8rem' }}>VIP Executive Client</div>
+                                        </div>
+                                        <div style={{ textAlign: isMobile ? 'left' : 'right', padding: isMobile ? '1.2rem' : '2rem' }}>
+                                            <div style={{ color: '#999', fontSize: '0.6rem', fontWeight: '900', textTransform: 'uppercase', marginBottom: '1.2rem', letterSpacing: '0.1em' }}>Dates & Processing</div>
+                                            <div style={{ color: '#333', fontSize: '0.9rem', marginBottom: '0.4rem' }}>Issued: {selectedTrx.date || new Date().toLocaleDateString()}</div>
+                                            <div style={{ color: '#333', fontSize: '0.9rem' }}>
+                                                Method: {(selectedTrx.status === 'Pending' || selectedTrx.status === 'Denied' || selectedTrx.status === 'Rejected') ? 'TBD' : selectedTrx.paymentMethod}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Service Table */}
+                                    <div style={{ marginBottom: isMobile ? '3rem' : '5rem' }}>
+                                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1.5fr 1fr' : '2fr 1fr 1fr', padding: '0.8rem 1.2rem', background: '#f5f5f5', borderRadius: '4px', marginBottom: '1rem' }}>
+                                            <div style={{ color: '#888', fontSize: '0.6rem', fontWeight: '900', textTransform: 'uppercase' }}>Description</div>
+                                            {!isMobile && <div style={{ color: '#888', fontSize: '0.6rem', fontWeight: '900', textTransform: 'uppercase', textAlign: 'center' }}>Category</div>}
+                                            <div style={{ color: '#888', fontSize: '0.6rem', fontWeight: '900', textTransform: 'uppercase', textAlign: 'right' }}>Total</div>
+                                        </div>
+                                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1.5fr 1fr' : '2fr 1fr 1fr', padding: isMobile ? '1.2rem' : '2rem', borderBottom: '1px solid #f0f0f0' }}>
+                                            <div style={{ color: '#000', fontSize: isMobile ? '1rem' : '1.1rem', fontWeight: '600' }}>{selectedTrx.item || 'Executive Maintenance'}</div>
+                                            {!isMobile && <div style={{ color: '#666', textAlign: 'center' }}>{selectedTrx.category}</div>}
+                                            <div style={{ color: 'var(--color-gold)', fontWeight: '900', fontSize: isMobile ? '1.1rem' : '1.2rem', textAlign: 'right' }}>${selectedTrx.amount}</div>
+                                        </div>
+                                    </div>
+
+                                    {/* Totals Section */}
+                                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: isMobile ? '4rem' : '8rem' }}>
+                                        <div style={{ width: isMobile ? '100%' : '300px' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.8rem' }}>
+                                                <span style={{ color: '#999', textTransform: 'uppercase', fontSize: '0.65rem', fontWeight: '900' }}>Subtotal</span>
+                                                <span style={{ color: '#000', fontSize: '0.9rem' }}>${selectedTrx.amount}.00</span>
+                                            </div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.2rem', paddingBottom: '1.2rem', borderBottom: '1px solid #eee' }}>
+                                                <span style={{ color: '#999', textTransform: 'uppercase', fontSize: '0.65rem', fontWeight: '900' }}>Tax (0%)</span>
+                                                <span style={{ color: '#000', fontSize: '0.9rem' }}>$0.00</span>
+                                            </div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <span style={{ color: 'var(--color-gold)', textTransform: 'uppercase', fontSize: '0.8rem', fontWeight: '900' }}>Grand Total</span>
+                                                <span style={{ color: '#000', fontSize: isMobile ? '1.6rem' : '2rem', fontWeight: '900' }}>${selectedTrx.amount}.00</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Footer & Auth Seal */}
+                                    <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'center' : 'flex-end', gap: '3rem' }}>
+                                        <div style={{ textAlign: isMobile ? 'center' : 'left' }}>
+                                            <div style={{ color: '#c9a96a', fontSize: '0.55rem', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '0.5rem' }}>Official Correspondence</div>
+                                            <div style={{ color: '#999', fontSize: '0.7rem', maxWidth: isMobile ? '100%' : '300px', lineHeight: '1.6' }}>
+                                                This document is electronically generated by Metro Blackline Care's executive financial orchestration layer.
+                                            </div>
+                                        </div>
+                                        <div style={{
+                                            width: isMobile ? '100px' : '120px',
+                                            height: isMobile ? '100px' : '120px',
+                                            borderRadius: '50%',
+                                            border: '2px dashed ' + (selectedTrx.status === 'Pending' ? '#ff9800' : '#4caf50'),
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            transform: isMobile ? 'none' : 'rotate(-15deg)',
+                                            background: 'rgba(255,255,255,0.01)',
+                                            flexShrink: 0
+                                        }}>
+                                            <div style={{ color: selectedTrx.status === 'Pending' ? '#ff9800' : '#4caf50', fontSize: '0.5rem', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.1em' }}>MBC Auth</div>
+                                            <div style={{ color: selectedTrx.status === 'Pending' ? '#ff9800' : '#4caf50', fontSize: isMobile ? '0.75rem' : '0.9rem', fontWeight: '900', margin: '2px 0' }}>
+                                                {selectedTrx.status === 'Pending' ? 'ISSUED' : 'PAID'}
+                                            </div>
+                                            <div style={{ color: selectedTrx.status === 'Pending' ? '#ff9800' : '#4caf50', fontSize: '0.35rem' }}>{new Date().toLocaleDateString()}</div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </motion.div>
                     </div>
@@ -657,7 +917,7 @@ const UserPayments = () => {
                 .gold { color: var(--color-gold); }
                 .glass-modal { background: rgba(10,10,10,0.95); backdrop-filter: blur(20px); }
             `}</style>
-        </div>
+        </div >
     );
 };
 

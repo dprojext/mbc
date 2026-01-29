@@ -22,6 +22,10 @@ const UserNotificationCenter = () => {
         }
     }, [location, myNotifications]);
 
+    // Ensure state from navigation is cleared so refreshing doesn't re-open old modals if needed, 
+    // but React Router usually handles this.
+    // Major Fix: Ensure modal z-index is high enough to be clickable.
+
     const getIcon = (type) => {
         switch (type) {
             case 'success': return <FiCheckCircle color="#4caf50" />;
@@ -66,11 +70,13 @@ const UserNotificationCenter = () => {
                                 style={{
                                     padding: '1.5rem',
                                     borderBottom: '1px solid #1a1a1a',
-                                    background: notif.read ? 'transparent' : 'rgba(var(--color-gold-rgb), 0.03)',
+                                    background: notif.read ? 'transparent' : 'rgba(201,169,106, 0.04)',
                                     display: 'flex',
                                     gap: '1.2rem',
                                     cursor: 'pointer',
-                                    transition: '0.2s'
+                                    transition: '0.2s',
+                                    position: 'relative',
+                                    borderLeft: notif.read ? 'none' : '4px solid var(--color-gold)'
                                 }}
                                 onClick={() => {
                                     setSelectedNotif(notif);
@@ -78,6 +84,14 @@ const UserNotificationCenter = () => {
                                 }}
                                 whileHover={{ background: 'rgba(255,255,255,0.02)' }}
                             >
+                                {!notif.read && (
+                                    <div style={{
+                                        position: 'absolute', top: '1rem', right: '1.5rem',
+                                        background: 'var(--color-gold)', color: '#000',
+                                        fontSize: '0.6rem', fontWeight: '900', padding: '2px 8px',
+                                        borderRadius: '4px', letterSpacing: '0.05em'
+                                    }}>NEW</div>
+                                )}
                                 <div style={{
                                     width: '45px', height: '45px', borderRadius: '12px',
                                     background: 'rgba(255,255,255,0.02)', display: 'flex',
@@ -132,12 +146,13 @@ const UserNotificationCenter = () => {
 
             <AnimatePresence>
                 {selectedNotif && (
-                    <div className="modal active" onClick={() => setSelectedNotif(null)}>
+                    <div className="modal active" onClick={() => setSelectedNotif(null)} style={{ zIndex: 9999 }}>
                         <motion.div
                             className="modal-content glass-modal"
-                            initial={{ opacity: 0, scale: 0.95 }}
+                            initial={{ opacity: 0, scale: 0.98 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
+                            exit={{ opacity: 0, scale: 0.98 }}
+                            transition={{ duration: 0.15, ease: "easeOut" }}
                             style={{
                                 maxWidth: '550px',
                                 padding: '2.5rem',
@@ -223,16 +238,38 @@ const UserNotificationCenter = () => {
                                 <div style={{ color: '#444', fontSize: '0.75rem', fontFamily: 'monospace' }}>
                                     RECEIVED: {formatTime(selectedNotif.timestamp)}
                                 </div>
-                                <button
-                                    className="btn btn-secondary"
-                                    style={{ padding: '0.7rem 2rem', borderRadius: '10px', color: '#ff4444', border: '1px solid rgba(255,68,68,0.2)' }}
-                                    onClick={() => {
-                                        deleteNotification(selectedNotif.id);
-                                        setSelectedNotif(null);
-                                    }}
-                                >
-                                    DISMISS
-                                </button>
+                                <div style={{ display: 'flex', gap: '1rem' }}>
+                                    <button
+                                        className="btn btn-secondary"
+                                        style={{ padding: '0.7rem 1.5rem', borderRadius: '10px', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setSelectedNotif(null);
+                                        }}
+                                        onMouseDown={(e) => { // ASAP Trigger
+                                            e.stopPropagation();
+                                            setSelectedNotif(null);
+                                        }}
+                                    >
+                                        RETURN TO HUB
+                                    </button>
+                                    <button
+                                        className="btn btn-secondary"
+                                        style={{ padding: '0.7rem 1.5rem', borderRadius: '10px', color: '#ff4444', border: '1px solid rgba(255,68,68,0.2)' }}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            deleteNotification(selectedNotif.id);
+                                            setSelectedNotif(null);
+                                        }}
+                                        onMouseDown={(e) => { // ASAP Trigger
+                                            e.stopPropagation();
+                                            deleteNotification(selectedNotif.id);
+                                            setSelectedNotif(null);
+                                        }}
+                                    >
+                                        DISMISS
+                                    </button>
+                                </div>
                             </div>
                         </motion.div>
                     </div>

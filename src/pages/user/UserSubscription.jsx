@@ -216,14 +216,31 @@ const UserSubscription = () => {
                         )}
 
                         <div style={{ display: 'flex', gap: '1rem' }}>
-                            <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => handleAction('Manage Billing')}>Manage Billing</button>
-                            <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => handleAction('Cancel Plan')}>Cancel Plan</button>
+                            {currentPlan ? (
+                                <>
+                                    <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => handleAction('Manage Billing')}>Manage Billing</button>
+                                    <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => handleAction('Cancel Plan')}>Cancel Plan</button>
+                                </>
+                            ) : (
+                                <button
+                                    className="btn btn-primary"
+                                    style={{ width: '100%', fontWeight: '800', letterSpacing: '0.05em' }}
+                                    onClick={() => {
+                                        const subSection = document.getElementById('switch-membership-section');
+                                        if (subSection) {
+                                            subSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                        }
+                                    }}
+                                >
+                                    Join Membership
+                                </button>
+                            )}
                         </div>
                     </motion.div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '1.5rem' }}>
                         {/* Switch Membership Section */}
-                        <div className="admin-card">
+                        <div className="admin-card" id="switch-membership-section">
                             <h3 style={{ color: '#fff', fontSize: '1.1rem', marginBottom: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
                                 <FiStar color="var(--color-gold)" /> Switch Membership
                             </h3>
