@@ -873,6 +873,20 @@ option {
     background: radial-gradient(ellipse at 30% 50%, rgba(var(--color-gold-rgb), 0.08) 0%, transparent 50%);
 }
 
+@media (max-width: 991px) {
+    .hero-bg::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background-image: var(--hero-image-url);
+        background-size: cover;
+        background-position: center;
+        filter: blur(8px) brightness(0.25);
+        opacity: 0.6;
+        z-index: -1;
+    }
+}
+
 .hero-content {
     width: 100%;
     max-width: 650px;
@@ -2097,6 +2111,15 @@ a.method-value:hover {
 
 .footer-brand {
     max-width: 400px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+@media (min-width: 992px) {
+    .footer-brand {
+        align-items: flex-start;
+    }
 }
 
 .footer-logo {
@@ -2489,14 +2512,15 @@ a.method-value:hover {
         display: flex;
         flex-wrap: nowrap !important;
         overflow-x: auto;
+        justify-content: flex-start !important;
         scroll-snap-type: x mandatory;
         scroll-behavior: smooth;
         padding: 1rem 0 2.5rem;
         gap: 1.2rem;
+        margin-left: 1.5rem !important;
         margin-right: -1rem;
-        margin-left: -1rem;
-        padding-left: 1rem;
-        padding-right: 1rem;
+        padding-left: 0 !important;
+        padding-right: 2rem;
         -webkit-overflow-scrolling: touch;
     }
 
@@ -2508,21 +2532,22 @@ a.method-value:hover {
         min-width: 270px;
         width: 270px;
         flex: 0 0 auto !important;
-        scroll-snap-align: center;
+        scroll-snap-align: start;
     }
 
     .plans-grid {
         display: flex !important;
         flex-wrap: nowrap !important;
         overflow-x: auto !important;
+        justify-content: flex-start !important;
         scroll-snap-type: x mandatory;
         scroll-behavior: smooth;
         padding: 1rem 0 2.5rem;
         gap: 1.2rem;
+        margin-left: 1.5rem !important;
         margin-right: -1rem;
-        margin-left: -1rem;
-        padding-left: 1rem;
-        padding-right: 1rem;
+        padding-left: 0 !important;
+        padding-right: 2rem;
         max-width: none !important;
         -webkit-overflow-scrolling: touch;
     }
@@ -2535,7 +2560,7 @@ a.method-value:hover {
         min-width: 280px;
         width: 280px;
         flex: 0 0 auto !important;
-        scroll-snap-align: center;
+        scroll-snap-align: start;
     }
 
     .form-row {
@@ -2605,6 +2630,11 @@ a.method-value:hover {
 
     .section-container {
         padding: 0 1rem !important;
+    }
+
+    .section-header {
+        margin-left: 0.5rem !important;
+        text-align: left !important;
     }
 
     .admin-grid-1,

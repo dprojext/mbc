@@ -14,7 +14,7 @@ const Hero = () => {
     const titleLine2 = taglineParts[1] ? taglineParts[1].trim() : 'Wherever You Are.';
 
     return (
-        <section className="hero" id="hero">
+        <section className="hero" id="hero" style={{ '--hero-image-url': `url(${settings?.landingImages?.hero || "/images/hero-car.jpg"})` }}>
             <div className="hero-bg">
                 <div className="hexagon-pattern"></div>
                 <div className="hero-gradient"></div>
@@ -56,7 +56,7 @@ const Hero = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.8, delay: 0.6 }}
                 >
-                    <RouterLink to="/booking" className="btn btn-primary btn-slim">
+                    <RouterLink to="/signup" className="btn btn-primary btn-slim">
                         <span>Book Your Detail</span>
                         <div className="btn-shine"></div>
                         <FiChevronRight className="btn-icon" />

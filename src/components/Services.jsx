@@ -56,10 +56,16 @@ const Services = () => {
             const container = scrollRef.current;
             const totalScroll = container.scrollWidth - container.clientWidth;
             const currentScroll = container.scrollLeft;
-            const progress = (currentScroll / totalScroll) * 100;
+            const progress = totalScroll > 0 ? (currentScroll / totalScroll) * 100 : 0;
             setScrollProgress(progress);
         }
     };
+
+    React.useEffect(() => {
+        if (scrollRef.current) {
+            scrollRef.current.scrollLeft = 0;
+        }
+    }, []);
 
     return (
         <section className="services" id="services">
@@ -113,7 +119,7 @@ const Services = () => {
                                             setConciergeData({ name: service.title, price: service.price });
                                             setIsConciergeOpen(true);
                                         } else {
-                                            navigate(`/booking?service=${encodeURIComponent(service.title)}`);
+                                            navigate('/signup');
                                         }
                                     }}
                                     className="service-link"

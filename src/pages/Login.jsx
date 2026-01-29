@@ -260,13 +260,6 @@ const Login = () => {
                                         style={{ width: '100%', padding: '0.9rem 1rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', color: '#fff', fontSize: '0.9rem' }}
                                     />
                                 </div>
-                                <input
-                                    type="text"
-                                    placeholder="Plate Number (Optional)"
-                                    value={profileData.vehiclePlate}
-                                    onChange={(e) => setProfileData(prev => ({ ...prev, vehiclePlate: e.target.value }))}
-                                    style={{ width: '100%', padding: '0.9rem 1rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', color: '#fff', fontSize: '0.9rem' }}
-                                />
                             </div>
 
                             {/* Location */}

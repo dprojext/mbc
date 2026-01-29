@@ -238,7 +238,8 @@ export const DataProvider = ({ children }) => {
                 }
                 if (fetchedServices) setServices(fetchedServices);
                 if (fetchedPlans) {
-                    setPlans(fetchedPlans.map(p => ({ ...p, activeUsers: p.active_users || 0 })));
+                    const mapped = fetchedPlans.map(p => ({ ...p, activeUsers: p.active_users || 0 }));
+                    setPlans(mapped.sort((a, b) => Number(a.price || 0) - Number(b.price || 0)));
                 }
 
                 // Map Profiles to Users (Deep attribute hydration)

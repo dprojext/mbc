@@ -21,10 +21,16 @@ const Membership = () => {
             const container = scrollRef.current;
             const totalScroll = container.scrollWidth - container.clientWidth;
             const currentScroll = container.scrollLeft;
-            const progress = (currentScroll / totalScroll) * 100;
+            const progress = totalScroll > 0 ? (currentScroll / totalScroll) * 100 : 0;
             setScrollProgress(progress);
         }
     };
+
+    React.useEffect(() => {
+        if (scrollRef.current) {
+            scrollRef.current.scrollLeft = 0;
+        }
+    }, []);
 
     const formatPrice = (price, planCurrency) => {
         if (currency === planCurrency) return price;
@@ -146,7 +152,7 @@ const Membership = () => {
                                             setConciergeData({ name: plan.name, price: `$${plan.price}` });
                                             setIsConciergeOpen(true);
                                         } else {
-                                            navigate(`/booking?service=${encodeURIComponent(plan.name)}`);
+                                            navigate('/signup');
                                         }
                                     }}
                                     className={index === featuredIndex ? "btn btn-primary plan-btn" : "btn btn-secondary plan-btn"}

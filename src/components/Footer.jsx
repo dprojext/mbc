@@ -51,6 +51,7 @@ const Footer = () => {
                     .mini-link:hover { color: var(--color-gold) !important; }
                     @media (max-width: 600px) {
                         .minimalistic-footer .section-container > div:first-child { flex-direction: column; text-align: center; }
+                        .footer-brand-mini { justify-content: center; }
                     }
                 `}</style>
             </footer>
