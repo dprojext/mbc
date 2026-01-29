@@ -939,16 +939,18 @@ option {
 
 .hero-cta {
     display: flex;
-    flex-direction: column;
-    gap: 1rem;
+    flex-direction: row;
+    justify-content: center;
+    gap: 0.8rem;
     margin-bottom: var(--space-2xl);
+    flex-wrap: nowrap;
 }
 
-@media (min-width: 480px) {
-    .hero-cta {
-        flex-direction: row;
-        justify-content: center;
-    }
+.btn-slim {
+    padding: 0.8rem 1.2rem !important;
+    font-size: 0.75rem !important;
+    min-width: auto !important;
+    white-space: nowrap;
 }
 
 @media (min-width: 992px) {
@@ -2486,17 +2488,16 @@ a.method-value:hover {
     .services-grid {
         display: flex;
         flex-wrap: nowrap !important;
-        /* Force single row */
         overflow-x: auto;
         scroll-snap-type: x mandatory;
         scroll-behavior: smooth;
-        padding: 1rem 0 2rem;
-        gap: 1.5rem;
-        margin-right: -1.2rem;
-        /* Bleed to edge */
-        margin-left: -1.2rem;
-        padding-left: 1.2rem;
-        padding-right: 1.2rem;
+        padding: 1rem 0 2.5rem;
+        gap: 1.2rem;
+        margin-right: -1rem;
+        margin-left: -1rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
+        -webkit-overflow-scrolling: touch;
     }
 
     .services-grid::-webkit-scrollbar {
@@ -2504,26 +2505,26 @@ a.method-value:hover {
     }
 
     .service-card {
-        min-width: 280px;
+        min-width: 270px;
+        width: 270px;
         flex: 0 0 auto !important;
-        /* Prevent shrinking/growing */
         scroll-snap-align: center;
     }
 
     .plans-grid {
         display: flex !important;
         flex-wrap: nowrap !important;
-        /* Force single row */
         overflow-x: auto !important;
         scroll-snap-type: x mandatory;
         scroll-behavior: smooth;
-        padding: 1rem 0 2rem;
-        gap: 1.5rem;
-        margin-right: -1.2rem;
-        margin-left: -1.2rem;
-        padding-left: 1.2rem;
-        padding-right: 1.2rem;
+        padding: 1rem 0 2.5rem;
+        gap: 1.2rem;
+        margin-right: -1rem;
+        margin-left: -1rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
         max-width: none !important;
+        -webkit-overflow-scrolling: touch;
     }
 
     .plans-grid::-webkit-scrollbar {
@@ -2531,9 +2532,9 @@ a.method-value:hover {
     }
 
     .plan-card {
-        min-width: 300px;
+        min-width: 280px;
+        width: 280px;
         flex: 0 0 auto !important;
-        /* Prevent shrinking/growing */
         scroll-snap-align: center;
     }
 

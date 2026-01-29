@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { Link as RouterLink } from 'react-router-dom';
 import { Link } from 'react-scroll';
 import { useData } from '../context/DataContext';
 import { FiChevronRight, FiSearch } from 'react-icons/fi';
@@ -55,12 +56,12 @@ const Hero = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.8, delay: 0.6 }}
                 >
-                    <Link to="booking" smooth={true} duration={500} className="btn btn-primary">
+                    <RouterLink to="/booking" className="btn btn-primary btn-slim">
                         <span>Book Your Detail</span>
                         <div className="btn-shine"></div>
                         <FiChevronRight className="btn-icon" />
-                    </Link>
-                    <Link to="services" smooth={true} duration={500} className="btn btn-secondary">
+                    </RouterLink>
+                    <Link to="services" smooth={true} duration={500} className="btn btn-secondary btn-slim">
                         <FiSearch className="btn-icon" />
                         <span>Explore Services</span>
                     </Link>
