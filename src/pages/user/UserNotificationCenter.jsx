@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
@@ -9,6 +9,7 @@ const UserNotificationCenter = () => {
     const { user } = useAuth();
     const { userNotifications = [], clearUserNotifications, markNotificationRead, deleteNotification } = useData();
     const location = useLocation();
+    const navigate = useNavigate();
     const [selectedNotif, setSelectedNotif] = useState(null);
 
     const myNotifications = userNotifications
@@ -70,26 +71,30 @@ const UserNotificationCenter = () => {
                                 style={{
                                     padding: '1.5rem',
                                     borderBottom: '1px solid #1a1a1a',
-                                    background: notif.read ? 'transparent' : 'rgba(201,169,106, 0.04)',
+                                    background: notif.read ? 'transparent' : 'rgba(201,169,106, 0.08)',
                                     display: 'flex',
                                     gap: '1.2rem',
                                     cursor: 'pointer',
                                     transition: '0.2s',
                                     position: 'relative',
-                                    borderLeft: notif.read ? 'none' : '4px solid var(--color-gold)'
+                                    borderLeft: notif.read ? '3px solid transparent' : '4px solid var(--color-gold)',
+                                    boxShadow: notif.read ? 'none' : '0 2px 8px rgba(201,169,106,0.15)'
                                 }}
                                 onClick={() => {
                                     setSelectedNotif(notif);
                                     if (!notif.read) markNotificationRead(notif.id);
                                 }}
-                                whileHover={{ background: 'rgba(255,255,255,0.02)' }}
+                                whileHover={{ background: notif.read ? 'rgba(255,255,255,0.02)' : 'rgba(201,169,106,0.08)' }}
                             >
                                 {!notif.read && (
                                     <div style={{
                                         position: 'absolute', top: '1rem', right: '1.5rem',
-                                        background: 'var(--color-gold)', color: '#000',
-                                        fontSize: '0.6rem', fontWeight: '900', padding: '2px 8px',
-                                        borderRadius: '4px', letterSpacing: '0.05em'
+                                        background: 'linear-gradient(135deg, var(--color-gold) 0%, #d4af37 100%)',
+                                        color: '#000',
+                                        fontSize: '0.6rem', fontWeight: '900', padding: '4px 12px',
+                                        borderRadius: '6px', letterSpacing: '0.05em',
+                                        boxShadow: '0 4px 12px rgba(201,169,106,0.4)',
+                                        animation: 'pulse 2s infinite'
                                     }}>NEW</div>
                                 )}
                                 <div style={{
@@ -103,8 +108,8 @@ const UserNotificationCenter = () => {
                                 <div style={{ flex: 1 }}>
                                     <div style={{ display: 'flex', flexDirection: window.innerWidth < 640 ? 'column' : 'row', justifyContent: 'space-between', marginBottom: '0.8rem', gap: '0.5rem' }}>
                                         <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                            <div style={{ color: 'var(--color-gold)', fontSize: '0.6rem', fontWeight: '900', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '0.2rem', opacity: 0.6 }}>Priority Alert</div>
-                                            <h3 style={{ color: '#fff', fontSize: '1.1rem', margin: 0, fontWeight: '800' }}>{notif.title}</h3>
+                                            <div style={{ color: notif.read ? '#555' : 'var(--color-gold)', fontSize: '0.6rem', fontWeight: '900', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '0.2rem', opacity: notif.read ? 0.4 : 0.8 }}>Priority Alert</div>
+                                            <h3 style={{ color: notif.read ? '#aaa' : '#fff', fontSize: '1.1rem', margin: 0, fontWeight: notif.read ? '600' : '800' }}>{notif.title}</h3>
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#555', fontSize: '0.7rem' }}>
                                             <FiClock size={12} /> {formatTime(notif.timestamp)}
@@ -113,17 +118,18 @@ const UserNotificationCenter = () => {
 
                                     <div style={{
                                         padding: '1.2rem',
-                                        background: 'rgba(255,255,255,0.01)',
+                                        background: notif.read ? 'rgba(255,255,255,0.005)' : 'rgba(255,255,255,0.02)',
                                         borderRadius: '14px',
-                                        border: '1px solid rgba(255,255,255,0.03)',
+                                        border: notif.read ? '1px solid rgba(255,255,255,0.02)' : '1px solid rgba(201,169,106,0.1)',
                                         marginTop: '0.5rem'
                                     }}>
-                                        <p style={{ color: '#aaa', margin: 0, fontSize: '0.95rem', lineHeight: '1.6' }}>{notif.message}</p>
+                                        <p style={{ color: notif.read ? '#777' : '#aaa', margin: 0, fontSize: '0.95rem', lineHeight: '1.6', fontWeight: notif.read ? '300' : '400' }}>{notif.message}</p>
                                     </div>
 
                                     {!notif.read && (
-                                        <div style={{ marginTop: '0.8rem' }}>
-                                            <div style={{ height: '2px', width: '20px', background: 'var(--color-gold)' }}></div>
+                                        <div style={{ marginTop: '0.8rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                            <div style={{ height: '3px', width: '30px', background: 'var(--color-gold)', borderRadius: '2px' }}></div>
+                                            <div style={{ color: 'var(--color-gold)', fontSize: '0.65rem', fontWeight: '900', letterSpacing: '0.1em' }}>UNREAD</div>
                                         </div>
                                     )}
                                 </div>
@@ -238,30 +244,22 @@ const UserNotificationCenter = () => {
                                 <div style={{ color: '#444', fontSize: '0.75rem', fontFamily: 'monospace' }}>
                                     RECEIVED: {formatTime(selectedNotif.timestamp)}
                                 </div>
-                                <div style={{ display: 'flex', gap: '1rem' }}>
+                                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                                     <button
-                                        className="btn btn-secondary"
-                                        style={{ padding: '0.7rem 1.5rem', borderRadius: '10px', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }}
+                                        className="btn btn-primary"
+                                        style={{ padding: '0.7rem 1.5rem', borderRadius: '10px', fontWeight: '900', fontSize: '0.85rem', letterSpacing: '0.05em', flex: '1 1 auto', minWidth: '140px' }}
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             setSelectedNotif(null);
-                                        }}
-                                        onMouseDown={(e) => { // ASAP Trigger
-                                            e.stopPropagation();
-                                            setSelectedNotif(null);
+                                            navigate('/dashboard');
                                         }}
                                     >
-                                        RETURN TO HUB
+                                        GO TO HUB
                                     </button>
                                     <button
                                         className="btn btn-secondary"
-                                        style={{ padding: '0.7rem 1.5rem', borderRadius: '10px', color: '#ff4444', border: '1px solid rgba(255,68,68,0.2)' }}
+                                        style={{ padding: '0.7rem 1.5rem', borderRadius: '10px', color: '#ff4444', border: '1px solid rgba(255,68,68,0.2)', fontWeight: '900', fontSize: '0.85rem', letterSpacing: '0.05em', flex: '1 1 auto', minWidth: '120px' }}
                                         onClick={(e) => {
-                                            e.stopPropagation();
-                                            deleteNotification(selectedNotif.id);
-                                            setSelectedNotif(null);
-                                        }}
-                                        onMouseDown={(e) => { // ASAP Trigger
                                             e.stopPropagation();
                                             deleteNotification(selectedNotif.id);
                                             setSelectedNotif(null);

@@ -2676,3 +2676,18 @@ a.method-value:hover {
 .auth-link:hover {
     text-decoration: underline;
 }
+
+/* Notification Pulse Animation */
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.8;
+        transform: scale(1.05);
+    }
+}

@@ -28,6 +28,8 @@ const UserPayments = () => {
     const [showDocPreview, setShowDocPreview] = useState(false);
     const [isSupporting, setIsSupporting] = useState(false);
     const [supportProblem, setSupportProblem] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [showSuccess, setShowSuccess] = useState(false);
 
     const getNumericPrice = (p) => {
         if (p === null || p === undefined || String(p) === 'null' || p === '') return 0;
@@ -431,13 +433,14 @@ const UserPayments = () => {
                             <div style={{ display: 'flex', gap: '1rem' }}>
                                 <button
                                     className="btn btn-primary"
-                                    style={{ flex: 1, padding: '1rem' }}
+                                    style={{ flex: 1, padding: '1rem', opacity: loading ? 0.7 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}
+                                    disabled={loading}
                                     onClick={async () => {
                                         if (!supportProblem.trim()) return;
                                         setLoading(true);
                                         try {
                                             // Find or create conversation
-                                            let targetConvo = conversations.find(c => c.customerId === user.id || c.customer_id === user.id);
+                                            let targetConvo = conversations.find(c => String(c.customerId) === String(user.id) || String(c.customer_id) === String(user.id));
                                             let cId = targetConvo?.id;
 
                                             if (!cId) {
@@ -447,16 +450,20 @@ const UserPayments = () => {
                                                     lastMessage: `[PROBLEM REPORTED] ${supportProblem.slice(0, 50)}...`,
                                                     lastMessageTime: new Date().toISOString()
                                                 });
-                                                cId = newC.id;
+                                                if (newC) {
+                                                    cId = newC.id;
+                                                }
                                             }
 
-                                            // Send actual message
-                                            await sendMessage({
-                                                conversationId: cId,
-                                                sender: 'customer',
-                                                text: `[PROBLEM REPORTED] ${supportProblem}`,
-                                                timestamp: new Date().toISOString()
-                                            });
+                                            if (cId) {
+                                                // Send actual message
+                                                await sendMessage({
+                                                    conversationId: cId,
+                                                    sender: 'user',
+                                                    text: `[PROBLEM REPORTED] ${supportProblem}`,
+                                                    timestamp: new Date().toISOString()
+                                                });
+                                            }
 
                                             // Also send administrative notification for high visibility
                                             await addAdminNotification({
@@ -468,16 +475,17 @@ const UserPayments = () => {
 
                                             setIsSupporting(false);
                                             setSupportProblem('');
-                                            alert("Strategic support ticket logged. Access your messages to track status.");
+                                            setShowSuccess(true);
                                         } catch (err) {
                                             console.error(err);
+                                            // Fallback for error remains alert for now as it's critical, or could be stylized too
                                             alert("Failed to synchronize support ticket. Please try again.");
                                         } finally {
                                             setLoading(false);
                                         }
                                     }}
                                 >
-                                    LOG ISSUE
+                                    {loading ? 'LOGGING...' : 'LOG ISSUE'}
                                 </button>
                                 <button className="btn btn-secondary" style={{ flex: 0.5 }} onClick={() => setIsSupporting(false)}>CANCEL</button>
                             </div>
@@ -515,48 +523,63 @@ const UserPayments = () => {
                                                 key={gw.id}
                                                 onClick={() => { setPaymentForm({ ...paymentForm, gatewayId: gw.id }); setPayStep(2); }}
                                                 style={{
-                                                    padding: '1.5rem', background: 'rgba(255,255,255,0.02)', border: '1px solid #222',
-                                                    borderRadius: '15px', color: '#fff', cursor: 'pointer', textAlign: 'left',
-                                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center', transition: '0.3s'
+                                                    padding: '1.5rem',
+                                                    background: 'rgba(201,169,106,0.05)',
+                                                    border: '1px solid rgba(201,169,106,0.2)',
+                                                    borderRadius: '20px',
+                                                    color: '#fff',
+                                                    cursor: 'pointer',
+                                                    textAlign: 'left',
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                    transition: '0.3s',
+                                                    width: '100%',
+                                                    position: 'relative',
+                                                    overflow: 'hidden'
                                                 }}
-                                                onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--color-gold)'}
-                                                onMouseLeave={e => e.currentTarget.style.borderColor = '#222'}
+                                                onMouseEnter={e => {
+                                                    e.currentTarget.style.borderColor = 'var(--color-gold)';
+                                                    e.currentTarget.style.background = 'rgba(201,169,106,0.08)';
+                                                }}
+                                                onMouseLeave={e => {
+                                                    e.currentTarget.style.borderColor = 'rgba(201,169,106,0.2)';
+                                                    e.currentTarget.style.background = 'rgba(201,169,106,0.05)';
+                                                }}
                                             >
                                                 <div style={{ flex: 1 }}>
-                                                    <div style={{ fontWeight: 'bold', fontSize: '1.1rem', marginBottom: '0.4rem' }}>{gw.name}</div>
-
                                                     {/* Rich Details Rendering */}
                                                     {gw.type?.startsWith('bank') || gw.bankProvider ? (
-                                                        <div className="stack-on-mobile" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '1rem', background: 'rgba(255,255,255,0.03)', padding: '1.2rem', borderRadius: '15px', border: '1px solid rgba(201,169,106,0.3)' }}>
+                                                        <div className="stack-on-mobile" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '1rem' }}>
                                                             {gw.bankProvider && (
                                                                 <div style={{ gridColumn: 'span 2', marginBottom: '0.4rem' }}>
-                                                                    <div style={{ color: '#888', fontSize: '0.7rem', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Financial Institution</div>
+                                                                    <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.65rem', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Financial Institution</div>
                                                                     <div style={{ color: '#fff', fontSize: '1.1rem', fontWeight: 'bold' }}>{gw.bankProvider}</div>
                                                                 </div>
                                                             )}
                                                             <div>
-                                                                <div style={{ color: '#888', fontSize: '0.7rem', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Account Name</div>
-                                                                <div style={{ color: '#fff', fontSize: '1rem', fontWeight: 'bold' }}>{gw.accountHolder || gw.bankName || 'N/A'}</div>
+                                                                <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.65rem', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Account Name</div>
+                                                                <div style={{ color: '#fff', fontSize: '0.95rem', fontWeight: 'bold' }}>{gw.accountHolder || gw.bankName || 'N/A'}</div>
                                                             </div>
                                                             <div>
-                                                                <div style={{ color: '#888', fontSize: '0.7rem', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Account No.</div>
+                                                                <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.65rem', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Account No.</div>
                                                                 <div style={{ color: 'var(--color-gold)', fontSize: '1.2rem', fontWeight: '900', letterSpacing: '0.05em' }}>{gw.accountNumber || 'N/A'}</div>
                                                             </div>
                                                         </div>
                                                     ) : gw.type === 'telebirr' ? (
-                                                        <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1.2rem', borderRadius: '15px', border: '1px solid rgba(201,169,106,0.3)' }}>
-                                                            <div style={{ color: '#888', fontSize: '0.7rem', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.05em' }}>TeleBirr Merchant</div>
+                                                        <div>
+                                                            <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.65rem', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.05em' }}>TeleBirr Merchant</div>
                                                             <div style={{ color: '#fff', fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '0.6rem' }}>{gw.accountHolder}</div>
                                                             <div style={{ color: 'var(--color-gold)', fontSize: '1.5rem', fontWeight: '900', letterSpacing: '0.1em' }}>{gw.accountNumber}</div>
                                                         </div>
                                                     ) : (
-                                                        <div style={{ color: '#555', fontSize: '0.85rem', whiteSpace: 'pre-line' }}>
+                                                        <div style={{ color: '#fff', fontSize: '0.95rem', whiteSpace: 'pre-line' }}>
                                                             {(() => {
-                                                                if (!gw.details) return "";
+                                                                if (!gw.details) return gw.name;
                                                                 const lines = gw.details.split('\n');
                                                                 if (lines.length > 0) {
                                                                     const firstLine = lines[0].trim().toLowerCase();
-                                                                    const cleanName = gw.name.trim().toLowerCase();
+                                                                    const cleanName = (gw.name || '').trim().toLowerCase();
                                                                     if (firstLine === cleanName ||
                                                                         firstLine.includes(cleanName) && firstLine.length < cleanName.length + 15 ||
                                                                         firstLine.startsWith('transfer to:') ||
@@ -569,7 +592,7 @@ const UserPayments = () => {
                                                         </div>
                                                     )}
                                                 </div>
-                                                <FiArrowRight color="var(--color-gold)" style={{ marginLeft: '1rem' }} />
+                                                <FiArrowRight color="var(--color-gold)" style={{ marginLeft: '1.5rem', fontSize: '1.2rem', opacity: 0.5 }} />
                                             </button>
                                         ))}
                                     </div>
@@ -907,6 +930,39 @@ const UserPayments = () => {
                                     </div>
                                 </div>
                             </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Success Modal */}
+            <AnimatePresence>
+                {showSuccess && (
+                    <div className="modal active" onClick={() => setShowSuccess(false)} style={{ zIndex: 4000, background: 'rgba(0,0,0,0.95)', backdropFilter: 'blur(15px)' }}>
+                        <motion.div
+                            className="modal-content glass-modal"
+                            onClick={e => e.stopPropagation()}
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            style={{
+                                maxWidth: '450px',
+                                width: '90%',
+                                padding: '3rem',
+                                borderRadius: '35px',
+                                textAlign: 'center',
+                                background: '#0a0a0a',
+                                border: '1px solid rgba(201,169,106,0.2)',
+                                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+                            }}
+                        >
+                            <div style={{ width: '80px', height: '80px', background: 'rgba(201,169,106,0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 2rem' }}>
+                                <FiCheckCircle size={40} color="var(--color-gold)" />
+                            </div>
+                            <h2 style={{ color: '#fff', fontSize: '1.8rem', fontWeight: '900', marginBottom: '1rem' }}>Ticket <span className="gold">Logged</span></h2>
+                            <p style={{ color: '#888', lineHeight: '1.6', marginBottom: '2.5rem', fontSize: '0.95rem' }}>
+                                Your strategic support request has been synchronized with our executive concierge. Track the status in your messages.
+                            </p>
+                            <button className="btn btn-primary" style={{ width: '100%', padding: '1.2rem', fontWeight: '900', letterSpacing: '0.05em' }} onClick={() => setShowSuccess(false)}>CONTINUE</button>
                         </motion.div>
                     </div>
                 )}

@@ -705,6 +705,22 @@ export const DataProvider = ({ children }) => {
         } catch (err) { console.error("Delete Booking Error:", err); }
     };
 
+    // Auto-notify user on booking status change
+    const notifyBookingUpdate = async (booking, userId) => {
+        if (!userId) return;
+        const statusMessages = {
+            'Confirmed': `Your ${booking.service || 'service'} booking has been confirmed for ${booking.date}.`,
+            'Completed': `Your ${booking.service || 'service'} appointment has been completed. Thank you for choosing Metro Blackline Care!`,
+            'Cancelled': `Your ${booking.service || 'service'} booking has been cancelled.`,
+            'Pending': `Your ${booking.service || 'service'} booking is pending confirmation.`
+        };
+        await sendUserNotification(userId, {
+            type: 'success',
+            title: `Booking ${booking.status}`,
+            message: statusMessages[booking.status] || `Booking status updated to ${booking.status}.`
+        });
+    };
+
     // Transactions
     const addTransaction = async (trx) => {
         // Prepare payload for Supabase (snake_case)
@@ -773,6 +789,23 @@ export const DataProvider = ({ children }) => {
             const { error } = await supabase.from('transactions').update(payload).eq('id', updated.id);
             if (error) throw error;
             setTransactions(prev => prev.map(t => String(t.id) === String(updated.id) ? { ...updated, amount: Number(updated.amount) } : t));
+
+            // Notify user if payment was approved
+            if (updated.userId && updated.status === 'Completed') {
+                await sendUserNotification(updated.userId, {
+                    type: 'success',
+                    title: 'Payment Confirmed',
+                    message: `Your payment of $${updated.amount} has been confirmed. Reference: ${updated.referenceNo}`,
+                    data: { transactionId: updated.id, amount: updated.amount, invoiceId: updated.invoiceId }
+                });
+            } else if (updated.userId && updated.status === 'Rejected') {
+                await sendUserNotification(updated.userId, {
+                    type: 'alert',
+                    title: 'Payment Issue',
+                    message: `Your payment submission was not approved. Please contact support or try again.`,
+                    data: { transactionId: updated.id }
+                });
+            }
         } catch (err) { console.error("Update Transaction Error:", err); }
     };
     const deleteTransaction = async (id) => {
@@ -942,6 +975,14 @@ export const DataProvider = ({ children }) => {
             if (error) throw error;
 
             setUsers(prev => prev.map(u => String(u.id) === String(userId) ? { ...u, subscriptionPlan: planName, plan: planName } : u));
+
+            // Notify user of subscription change
+            await sendUserNotification(userId, {
+                type: 'success',
+                title: 'Subscription Updated',
+                message: `Your subscription has been updated to the ${planName} plan. Enjoy your premium benefits!`
+            });
+
             return { success: true };
         } catch (err) {
             console.error("Update Subscription Error:", err);

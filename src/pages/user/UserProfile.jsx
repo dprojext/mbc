@@ -102,14 +102,28 @@ const UserProfile = () => {
             setVehicles(user.savedVehicles || []);
             setAddresses(user.savedAddresses || []);
 
-            // CRITICAL FIX: Prioritize auth metadata for visuals
-            const remoteImg = user.user_metadata?.profile_img || user.profileImg;
-            if (remoteImg) setProfileImg(remoteImg);
+            // CRITICAL FIX: Prioritize database profile image over metadata (which may truncate large base64 strings)
+            const remoteImg = user.profileImg || user.user_metadata?.profile_img;
+            if (remoteImg) {
+                setProfileImg(remoteImg);
+            }
         }
     }, [user, isEditingEmail]);
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
+    const handleProfileImageChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setProfileImg(reader.result);
+                setShowAvatarSelector(false);
+            };
+            reader.readAsDataURL(file);
+        }
     };
 
     const handleUpdateProfile = async (e) => {
@@ -162,12 +176,13 @@ const UserProfile = () => {
             const { data: updatedAuth, error: authUpdateError } = await supabase.auth.updateUser(updates);
             if (authUpdateError) throw authUpdateError;
 
-            // 4. Update DB Profile (Skip img)
+            // 4. Update DB Profile
             const { error: profileError } = await supabase
                 .from('profiles')
                 .update({
                     display_name: formData.name,
                     phone: formData.phone,
+                    profile_img: profileImg,
                     saved_vehicles: vehicles,
                     saved_addresses: addresses
                 })
@@ -175,7 +190,7 @@ const UserProfile = () => {
 
             if (profileError) console.warn("DB Profile sync warning:", profileError.message);
 
-            // 5. Update Local State
+            // 5. Update Local State (Optional override if metadata returned)
             if (updatedAuth?.user?.user_metadata?.profile_img) {
                 setProfileImg(updatedAuth.user.user_metadata.profile_img);
             }
@@ -313,20 +328,30 @@ const UserProfile = () => {
                     >
                         <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: 'center', gap: isMobile ? '1.5rem' : '3rem', marginBottom: '3rem', paddingBottom: '2rem', borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
                             <div style={{ position: 'relative' }}>
-                                <div style={{
-                                    width: isMobile ? '100px' : '140px', height: isMobile ? '100px' : '140px', borderRadius: '30px',
-                                    background: '#111',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    fontSize: isMobile ? '2.5rem' : '3.5rem', color: 'var(--color-gold)', fontWeight: '900', textTransform: 'uppercase',
-                                    boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
-                                    overflow: 'hidden',
-                                    border: '1px solid rgba(201,169,106,0.15)'
-                                }}>
+                                <div
+                                    onClick={() => setShowAvatarSelector(!showAvatarSelector)}
+                                    style={{
+                                        width: isMobile ? '100px' : '140px', height: isMobile ? '100px' : '140px', borderRadius: '30px',
+                                        background: '#111',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        fontSize: isMobile ? '2.5rem' : '3.5rem', color: 'var(--color-gold)', fontWeight: '900', textTransform: 'uppercase',
+                                        boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
+                                        overflow: 'hidden',
+                                        border: '1px solid rgba(201,169,106,0.15)',
+                                        backgroundImage: profileImg && !avatars.find(a => a.id === profileImg) ? `url("${profileImg}")` : 'none',
+                                        backgroundSize: 'cover',
+                                        backgroundPosition: 'center',
+                                        backgroundRepeat: 'no-repeat',
+                                        cursor: 'pointer'
+                                    }}>
                                     {/* Render the selected icon or fallback */}
-                                    {profileImg && avatars.find(a => a.id === profileImg) ? avatars.find(a => a.id === profileImg).icon : (formData.name && !formData.name.includes('@') ? formData.name : user?.email || 'M').charAt(0)}
+                                    {(!profileImg || avatars.find(a => a.id === profileImg)) && (
+                                        profileImg ? avatars.find(a => a.id === profileImg)?.icon : (formData.name && !formData.name.includes('@') ? formData.name : user?.email || 'M').charAt(0)
+                                    )}
                                 </div>
 
                                 {/* Edit/Change Button */}
+                                <input type="file" accept="image/*" onChange={handleProfileImageChange} id="profile-upload" hidden />
                                 <button
                                     onClick={() => setShowAvatarSelector(!showAvatarSelector)}
                                     style={{
@@ -338,7 +363,7 @@ const UserProfile = () => {
                                         zIndex: 5, fontWeight: 'bold', fontSize: '0.75rem'
                                     }}
                                 >
-                                    <FiEdit2 size={16} /> CHANGE
+                                    <FiCamera size={16} /> CHANGE
                                 </button>
 
                                 <AnimatePresence>
@@ -350,11 +375,23 @@ const UserProfile = () => {
                                             style={{
                                                 position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', marginTop: '1rem',
                                                 background: '#0a0a0a', border: '1px solid #222', borderRadius: '25px',
-                                                padding: '1.5rem', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem',
-                                                zIndex: 100, boxShadow: '0 20px 50px rgba(0,0,0,0.8)', width: '280px',
-                                                maxHeight: '320px', overflowY: 'auto', overflowX: 'hidden'
+                                                padding: '1.5rem 1rem 1.5rem 1.5rem', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem',
+                                                zIndex: 100, boxShadow: '0 20px 50px rgba(0,0,0,0.8)', width: '300px',
+                                                maxHeight: '320px', overflowY: 'auto', overflowX: 'hidden', justifyItems: 'center'
                                             }}
                                         >
+                                            <button
+                                                onClick={() => document.getElementById('profile-upload').click()}
+                                                style={{
+                                                    gridColumn: 'span 4', padding: '1rem', marginBottom: '0.5rem',
+                                                    background: 'rgba(201,169,106,0.1)', border: '1px dashed var(--color-gold)',
+                                                    borderRadius: '15px', color: 'var(--color-gold)', cursor: 'pointer',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.8rem',
+                                                    fontSize: '0.8rem', fontWeight: 'bold', width: '100%'
+                                                }}
+                                            >
+                                                <FiCamera size={18} /> UPLOAD CUSTOM IMAGE
+                                            </button>
                                             {avatars.map(av => (
                                                 <button
                                                     key={av.id}

@@ -15,7 +15,6 @@ const Login = () => {
     const [profileData, setProfileData] = useState({
         vehicleYear: '',
         vehicleModel: '',
-        vehiclePlate: '',
         location: '',
         lat: null,
         lng: null,
@@ -54,8 +53,7 @@ const Login = () => {
                 updates.saved_vehicles = [{
                     name: `${profileData.vehicleYear} ${profileData.vehicleModel}`.trim(),
                     year: profileData.vehicleYear,
-                    model: profileData.vehicleModel,
-                    plate: profileData.vehiclePlate
+                    model: profileData.vehicleModel
                 }];
             }
             if (profileData.location) {

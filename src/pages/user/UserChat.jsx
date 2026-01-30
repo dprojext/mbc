@@ -130,7 +130,7 @@ const UserChat = () => {
                     )}
 
                     {myMessages.map((msg, idx) => {
-                        const isMe = msg.sender === 'user';
+                        const isMe = msg.sender === 'user' || msg.sender === 'customer';
                         const isDeleted = msg.deleted;
                         const isEdited = msg.edited;
 
@@ -160,7 +160,9 @@ const UserChat = () => {
                                     {isDeleted ? (
                                         <span style={{ fontStyle: 'italic', opacity: 0.6 }}>Message Deleted</span>
                                     ) : (
-                                        msg.text
+                                        <span style={{ color: msg.text?.startsWith('[PROBLEM REPORTED]') ? '#ff0000ff' : 'inherit' }}>
+                                            {msg.text}
+                                        </span>
                                     )}
                                 </div>
                                 <div style={{

@@ -353,7 +353,7 @@ const AdminChat = () => {
                                                 </div>
                                             ) : (
                                                 <>
-                                                    <p style={{ margin: 0 }}>{msg.text}</p>
+                                                    <p style={{ margin: 0, color: msg.text?.startsWith('[PROBLEM REPORTED]') ? '#ff4444' : 'inherit' }}>{msg.text}</p>
                                                     {isAdmin && (
                                                         <div className="message-actions" style={{ position: 'absolute', right: '100%', top: '50%', transform: 'translateY(-50%)', display: 'none', gap: '0.5rem', padding: '0 1rem' }}>
                                                             <button onClick={() => { setEditingMsgId(msg.id); setEditValue(msg.text); }} style={{ background: '#333', border: 'none', color: '#fff', padding: '0.4rem', borderRadius: '50%', cursor: 'pointer' }}><FiEdit2 size={12} /></button>
