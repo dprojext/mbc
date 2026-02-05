@@ -26,7 +26,9 @@ const AdminPayments = () => {
         updateTransaction,
         updateUserSubscription,
         updateBooking,
-        sendUserNotification
+        sendUserNotification,
+        currency,
+        setCurrency
     } = useData();
 
     const getGwIcon = (type, existingIcon) => {
@@ -166,6 +168,7 @@ const AdminPayments = () => {
         userId: '',
         user: '',
         amount: '',
+        currency: 'USD',
         category: 'Service', // 'Service' or 'Subscription'
         itemId: '',
         status: 'Completed',
@@ -198,12 +201,28 @@ const AdminPayments = () => {
 
     const stats = useMemo(() => {
         const completed = filteredTransactions.filter(t => t.status === 'Completed' || t.status === 'Paid');
-        const revenue = completed.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+        const revenue = completed.reduce((acc, curr) => {
+            // "Only deposited" logic: sum specific currency fields, or amount if it matches selected currency
+            const amount = currency === 'ETB'
+                ? (curr.amount_etb || (curr.currency === 'ETB' ? curr.amount : 0))
+                : (curr.amount_usd || (curr.currency === 'USD' || !curr.currency ? curr.amount : 0));
+            return acc + (Number(amount) || 0);
+        }, 0);
         const count = filteredTransactions.length;
         const avg = count > 0 ? (revenue / (completed.length || 1)).toFixed(2) : 0;
 
-        const serviceRev = completed.filter(t => t.category === 'Service').reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
-        const subRev = completed.filter(t => t.category === 'Subscription').reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+        const serviceRev = completed.filter(t => t.category === 'Service').reduce((acc, curr) => {
+            const amount = currency === 'ETB'
+                ? (curr.amount_etb || (curr.currency === 'ETB' ? curr.amount : 0))
+                : (curr.amount_usd || (curr.currency === 'USD' || !curr.currency ? curr.amount : 0));
+            return acc + (Number(amount) || 0);
+        }, 0);
+        const subRev = completed.filter(t => t.category === 'Subscription').reduce((acc, curr) => {
+            const amount = currency === 'ETB'
+                ? (curr.amount_etb || (curr.currency === 'ETB' ? curr.amount : 0))
+                : (curr.amount_usd || (curr.currency === 'USD' || !curr.currency ? curr.amount : 0));
+            return acc + (Number(amount) || 0);
+        }, 0);
 
         return {
             revenue,
@@ -213,7 +232,7 @@ const AdminPayments = () => {
             serviceRev,
             subRev
         };
-    }, [filteredTransactions]);
+    }, [filteredTransactions, currency]);
 
     const chartData = useMemo(() => {
         const last7Days = [...Array(7)].map((_, i) => {
@@ -224,13 +243,18 @@ const AdminPayments = () => {
 
         return last7Days.map(date => {
             const dayTrx = transactions.filter(t => (t.date || t.timestamp || '').split('T')[0] === date && (t.status === 'Completed' || t.status === 'Paid'));
-            const amount = dayTrx.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+            const amount = dayTrx.reduce((sum, t) => {
+                const val = currency === 'ETB'
+                    ? (t.amount_etb || (t.currency === 'ETB' ? t.amount : 0))
+                    : (t.amount_usd || (t.currency === 'USD' || !t.currency ? t.amount : 0));
+                return sum + (Number(val) || 0);
+            }, 0);
             return {
                 name: new Date(date).toLocaleDateString('en-US', { weekday: 'short' }),
                 amount
             };
         });
-    }, [transactions]);
+    }, [transactions, currency]);
 
     const allocationData = [
         { name: 'Services', value: stats.serviceRev || 0 },
@@ -363,6 +387,22 @@ const AdminPayments = () => {
                     <p style={{ color: '#666', fontSize: '0.9rem', marginTop: '0.4rem' }}>Authoritative registry and revenue telemetry hub.</p>
                 </div>
                 <div style={{ display: 'flex', gap: '1rem' }}>
+                    <div style={{ display: 'flex', gap: '0.4rem', background: 'rgba(255,255,255,0.03)', padding: '0.4rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                        {['USD', 'ETB'].map(curr => (
+                            <button
+                                key={curr}
+                                onClick={() => setCurrency(curr)}
+                                style={{
+                                    padding: '0.4rem 0.8rem', borderRadius: '8px', border: 'none',
+                                    background: currency === curr ? 'var(--color-gold)' : 'transparent',
+                                    color: currency === curr ? '#000' : '#888',
+                                    fontWeight: '900', fontSize: '0.7rem', cursor: 'pointer', transition: '0.2s'
+                                }}
+                            >
+                                {curr}
+                            </button>
+                        ))}
+                    </div>
                     <button
                         onClick={() => setIsAdding(true)}
                         className="btn btn-primary"
@@ -417,21 +457,21 @@ const AdminPayments = () => {
                             <div className="admin-card" style={{ padding: '1.5rem' }}>
                                 <div style={{ color: '#444', fontSize: '0.7rem', fontWeight: '900', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Total Liquidity</div>
                                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
-                                    <div style={{ color: '#fff', fontSize: '2rem', fontWeight: '800' }}>${stats.revenue.toLocaleString()}</div>
+                                    <div style={{ color: '#fff', fontSize: '2rem', fontWeight: '800' }}>{currency === 'ETB' ? 'ETB ' : '$'}{stats.revenue.toLocaleString()}</div>
                                     <div style={{ color: '#4caf50', fontSize: '0.75rem', fontWeight: 'bold' }}><FiArrowUpRight /> +12%</div>
                                 </div>
                             </div>
                             <div className="admin-card" style={{ padding: '1.5rem' }}>
                                 <div style={{ color: '#444', fontSize: '0.7rem', fontWeight: '900', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Service Rev</div>
-                                <div style={{ color: '#fff', fontSize: '2rem', fontWeight: '800' }}>${stats.serviceRev.toLocaleString()}</div>
+                                <div style={{ color: '#fff', fontSize: '2rem', fontWeight: '800' }}>{currency === 'ETB' ? 'ETB ' : '$'}{stats.serviceRev.toLocaleString()}</div>
                             </div>
                             <div className="admin-card" style={{ padding: '1.5rem' }}>
                                 <div style={{ color: '#444', fontSize: '0.7rem', fontWeight: '900', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Subscription Rev</div>
-                                <div style={{ color: '#fff', fontSize: '2rem', fontWeight: '800' }}>${stats.subRev.toLocaleString()}</div>
+                                <div style={{ color: '#fff', fontSize: '2rem', fontWeight: '800' }}>{currency === 'ETB' ? 'ETB ' : '$'}{stats.subRev.toLocaleString()}</div>
                             </div>
                             <div className="admin-card" style={{ padding: '1.5rem' }}>
                                 <div style={{ color: '#444', fontSize: '0.7rem', fontWeight: '900', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Avg Ticket</div>
-                                <div style={{ color: '#fff', fontSize: '2rem', fontWeight: '800' }}>${stats.avg}</div>
+                                <div style={{ color: '#fff', fontSize: '2rem', fontWeight: '800' }}>{currency === 'ETB' ? 'ETB ' : '$'}{stats.avg}</div>
                             </div>
                         </div>
 
@@ -498,7 +538,7 @@ const AdminPayments = () => {
                                                 <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: COLORS[i] }} />
                                                 <span style={{ color: '#888', fontSize: '0.9rem' }}>{d.name}</span>
                                             </div>
-                                            <span style={{ color: '#fff', fontWeight: 'bold' }}>${d.value.toLocaleString()}</span>
+                                            <span style={{ color: '#fff', fontWeight: 'bold' }}>{currency === 'ETB' ? 'ETB ' : '$'}{d.value.toLocaleString()}</span>
                                         </div>
                                     ))}
                                 </div>
@@ -572,7 +612,9 @@ const AdminPayments = () => {
                                                 <div style={{ color: '#fff', fontSize: '0.9rem', fontWeight: '600' }}>{trx.user}</div>
                                                 <div style={{ color: '#444', fontSize: '0.7rem' }}>{trx.category}</div>
                                             </td>
-                                            <td style={{ padding: '1.5rem', color: '#fff', fontWeight: '900', fontSize: '1.1rem' }}>${trx.amount.toLocaleString()}</td>
+                                            <td style={{ padding: '1.5rem', color: '#fff', fontWeight: '900', fontSize: '1.1rem' }}>
+                                                {currency === 'ETB' ? 'ETB ' : '$'}{(currency === 'ETB' ? (trx.amount_etb || trx.amount * 120) : (trx.amount_usd || trx.amount)).toLocaleString()}
+                                            </td>
                                             <td style={{ padding: '1.5rem' }}>
                                                 <div style={{ color: '#fff', fontSize: '0.85rem' }}>{trx.paymentMethod}</div>
                                                 <div style={{ color: '#444', fontSize: '0.7rem', fontFamily: 'monospace' }}>{trx.referenceNo || 'NO_REF'}</div>
@@ -827,16 +869,37 @@ const AdminPayments = () => {
                                 </div>
 
                                 <div>
-                                    <label style={{ color: '#666', fontSize: '0.65rem', fontWeight: '900', textTransform: 'uppercase', display: 'block', marginBottom: '0.8rem', letterSpacing: '0.05em' }}>Effective Liquidity</label>
+                                    <label style={{ color: '#666', fontSize: '0.65rem', fontWeight: '900', textTransform: 'uppercase', display: 'block', marginBottom: '0.8rem', letterSpacing: '0.05em' }}>Settlement Currency</label>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', background: '#0d0d0d', padding: '0.5rem', borderRadius: '15px', border: '1px solid #222' }}>
+                                        {['USD', 'ETB'].map(curr => (
+                                            <button
+                                                key={curr}
+                                                type="button"
+                                                onClick={() => setNewTrx({ ...newTrx, currency: curr })}
+                                                style={{
+                                                    padding: '0.6rem', borderRadius: '10px', border: 'none',
+                                                    background: newTrx.currency === curr ? 'var(--color-gold)' : 'transparent',
+                                                    color: newTrx.currency === curr ? '#000' : '#444',
+                                                    fontWeight: '900', fontSize: '0.7rem', cursor: 'pointer', transition: '0.3s'
+                                                }}
+                                            >
+                                                {curr}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div style={{ gridColumn: 'span 2' }}>
+                                    <label style={{ color: '#666', fontSize: '0.65rem', fontWeight: '900', textTransform: 'uppercase', display: 'block', marginBottom: '0.8rem', letterSpacing: '0.05em' }}>Effective Liquidity ({newTrx.currency})</label>
                                     <div style={{ position: 'relative' }}>
-                                        <FiDollarSign style={{ position: 'absolute', left: '1.2rem', top: '50%', transform: 'translateY(-50%)', color: '#4caf50' }} />
+                                        <div style={{ position: 'absolute', left: '1.2rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-gold)', fontWeight: 'bold' }}>{newTrx.currency === 'USD' ? '$' : 'Br'}</div>
                                         <input
                                             type="number"
                                             placeholder="0.00"
                                             value={newTrx.amount}
                                             onChange={e => setNewTrx({ ...newTrx, amount: e.target.value })}
                                             required
-                                            style={{ width: '100%', padding: '1rem 1rem 1rem 3.5rem', background: '#0d0d0d', border: '1px solid #222', borderRadius: '15px', color: '#fff', fontSize: '1.3rem', fontWeight: '900', height: '55px' }}
+                                            style={{ width: '100%', paddingLeft: '3.5rem', background: '#0d0d0d', border: '1px solid #222', borderRadius: '15px', color: '#fff', fontSize: '1.3rem', fontWeight: '900', height: '55px' }}
                                         />
                                     </div>
                                 </div>

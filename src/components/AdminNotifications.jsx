@@ -10,6 +10,7 @@ const AdminNotifications = () => {
     const { adminNotifications, markNotificationRead, clearAllNotifications } = useData();
     const [isOpen, setIsOpen] = useState(false);
     const [selectedNotif, setSelectedNotif] = useState(null);
+    const [showConfirmClear, setShowConfirmClear] = useState(false);
 
     const unreadCount = (adminNotifications || []).filter(n => !n.read).length;
 
@@ -115,18 +116,46 @@ const AdminNotifications = () => {
                         }}>
                             <h3 style={{ margin: 0, color: '#fff', fontSize: '1.1rem' }}>Notifications</h3>
                             {(adminNotifications || []).length > 0 && (
-                                <button
-                                    onClick={clearAllNotifications}
-                                    style={{
-                                        background: 'none',
-                                        border: 'none',
-                                        color: '#666',
-                                        fontSize: '0.8rem',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    Clear all
-                                </button>
+                                <div style={{ position: 'relative' }}>
+                                    <button
+                                        onClick={() => setShowConfirmClear(true)}
+                                        style={{
+                                            background: 'none',
+                                            border: 'none',
+                                            color: '#666',
+                                            fontSize: '0.8rem',
+                                            cursor: 'pointer',
+                                            transition: '0.2s',
+                                            fontWeight: '600'
+                                        }}
+                                        onMouseEnter={e => e.currentTarget.style.color = '#ff4444'}
+                                        onMouseLeave={e => e.currentTarget.style.color = '#666'}
+                                    >
+                                        Clear all
+                                    </button>
+
+                                    {showConfirmClear && (
+                                        <div style={{
+                                            position: 'absolute', top: '100%', right: 0,
+                                            background: '#222', border: '1px solid #333',
+                                            padding: '1rem', borderRadius: '12px', zIndex: 1000,
+                                            boxShadow: '0 10px 30px rgba(0,0,0,0.5)', width: '200px',
+                                            animation: 'slideDown 0.2s ease'
+                                        }}>
+                                            <div style={{ color: '#fff', fontSize: '0.8rem', marginBottom: '0.8rem', fontWeight: '700' }}>Confirm clear all?</div>
+                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                <button
+                                                    onClick={() => { clearAllNotifications(); setShowConfirmClear(false); }}
+                                                    style={{ flex: 1, padding: '0.4rem', background: '#ff4444', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}
+                                                >Yes, Clear</button>
+                                                <button
+                                                    onClick={() => setShowConfirmClear(false)}
+                                                    style={{ flex: 1, padding: '0.4rem', background: '#333', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}
+                                                >Cancel</button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             )}
                         </div>
 

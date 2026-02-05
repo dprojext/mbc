@@ -4,6 +4,8 @@ import { useData } from '../../context/DataContext';
 const AdminData = () => {
     const { transactions, bookings, plans, services, users, purgeSystemData } = useData();
     const [downloadType, setDownloadType] = React.useState('CSV'); // 'CSV' or 'JSON'
+    const [showPurgeConfirm, setShowPurgeConfirm] = React.useState(false);
+    const [purgeTerm, setPurgeTerm] = React.useState('');
 
     const generateCSV = (data) => {
         if (!data || !Array.isArray(data) || data.length === 0) return '';
@@ -36,7 +38,7 @@ const AdminData = () => {
     const handleDownload = (category) => {
         const data = getDataByType(category);
         const date = new Date().toISOString().split('T')[0];
-        let filename = `${category.toLowerCase().replace(' ', '-')}-${date}`;
+        let filename = `${category.toLowerCase().replace(' ', '-')} -${date} `;
         let content = '';
         let type = '';
 
@@ -64,7 +66,7 @@ const AdminData = () => {
 
     const handleUpload = (category) => {
         // Trigger file input
-        const input = document.getElementById(`file-upload-${category}`);
+        const input = document.getElementById(`file - upload - ${category} `);
         if (input) input.click();
     };
 
@@ -183,7 +185,7 @@ const AdminData = () => {
                                 </button>
                                 <input
                                     type="file"
-                                    id={`file-upload-${item.label}`}
+                                    id={`file - upload - ${item.label} `}
                                     style={{ display: 'none' }}
                                     onChange={(e) => onFileChange(e, item.label)}
                                 />
@@ -210,18 +212,80 @@ const AdminData = () => {
                         <p style={{ color: '#666', margin: 0 }}>Permanently delete all system data (Users, Bookings, Payments, etc). This cannot be undone.</p>
                     </div>
                     <button
-                        onClick={() => {
-                            if (window.confirm('CRITICAL: Are you absolutely sure? This will wipe ALL customers, bookings, and payment records from the system permanently.')) {
-                                purgeSystemData();
-                                alert('System reset complete. All data has been purged.');
-                            }
-                        }}
+                        onClick={() => setShowPurgeConfirm(true)}
                         style={{ background: '#ff4444', color: '#fff', border: 'none', padding: '1rem 2rem', borderRadius: '12px', fontWeight: '800', cursor: 'pointer' }}
                     >
                         Purge All System Data
                     </button>
                 </div>
             </div>
+
+            {/* Confirm Purge Modal */}
+            {showPurgeConfirm && (
+                <>
+                    <div
+                        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(10px)', zIndex: 10000 }}
+                        onClick={() => setShowPurgeConfirm(false)}
+                    />
+                    <div style={{
+                        position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+                        width: '90%', maxWidth: '500px', background: '#111', border: '1px solid #ff4444',
+                        borderRadius: '24px', padding: '3rem', zIndex: 10001, textAlign: 'center',
+                        boxShadow: '0 30px 60px rgba(0,0,0,0.8)'
+                    }}>
+                        <div style={{ fontSize: '3rem', marginBottom: '1.5rem' }}>🛑</div>
+                        <h2 style={{ color: '#ff4444', fontSize: '2rem', marginBottom: '1rem', fontFamily: 'var(--font-heading)' }}>Systemic Purge</h2>
+                        <p style={{ color: '#888', marginBottom: '2rem', lineHeight: '1.6' }}>
+                            You are about to permanently delete <strong>EVERYTHING</strong>: users, bookings, transactions, and service history. This action is irreversible.
+                        </p>
+
+                        <div style={{ marginBottom: '2rem' }}>
+                            <label style={{ display: 'block', color: '#ff4444', fontSize: '0.7rem', fontWeight: '900', textTransform: 'uppercase', marginBottom: '0.5rem', textAlign: 'left' }}>
+                                Type "PURGE" to authorize this destruction:
+                            </label>
+                            <input
+                                type="text"
+                                value={purgeTerm}
+                                onChange={(e) => setPurgeTerm(e.target.value)}
+                                style={{
+                                    width: '100%', padding: '1rem', background: '#000', border: '1px solid #333',
+                                    borderRadius: '12px', color: '#ff4444', fontSize: '1.2rem', fontWeight: 'bold',
+                                    textAlign: 'center', outline: 'none'
+                                }}
+                                placeholder="PURGE"
+                            />
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '1rem' }}>
+                            <button
+                                onClick={() => setShowPurgeConfirm(false)}
+                                style={{ flex: 1, padding: '1rem', background: '#222', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}
+                            >
+                                ABORT
+                            </button>
+                            <button
+                                onClick={() => {
+                                    if (purgeTerm.trim().toUpperCase() === 'PURGE') {
+                                        purgeSystemData();
+                                        setShowPurgeConfirm(false);
+                                        setPurgeTerm('');
+                                    }
+                                }}
+                                disabled={purgeTerm.trim().toUpperCase() !== 'PURGE'}
+                                style={{
+                                    flex: 1, padding: '1rem',
+                                    background: purgeTerm.trim().toUpperCase() === 'PURGE' ? '#ef4444' : '#444',
+                                    color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 'bold',
+                                    cursor: purgeTerm.trim().toUpperCase() === 'PURGE' ? 'pointer' : 'not-allowed',
+                                    opacity: purgeTerm.trim().toUpperCase() === 'PURGE' ? 1 : 0.5
+                                }}
+                            >
+                                AUTHORIZE PURGE
+                            </button>
+                        </div>
+                    </div>
+                </>
+            )}
         </div>
     );
 };

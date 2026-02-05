@@ -6,7 +6,7 @@ import { useData } from '../context/DataContext';
 import { FiBell, FiMessageSquare, FiUser, FiZap, FiSettings, FiCamera } from 'react-icons/fi';
 import {
     FaUser, FaUserTie, FaUserGraduate, FaUserAstronaut, FaUserSecret, FaUserDoctor, FaUserNinja,
-    FaPersonDress, FaUserPlus as FaUserPlus6, FaUserLarge, FaUserGear,
+    FaPersonDress, FaUserPlus, FaUserLarge, FaUserGear,
     FaCar, FaCarSide, FaCarOn, FaCarRear,
     FaTruck, FaTruckFast, FaTruckMonster, FaVanShuttle,
     FaPlane, FaPlaneUp, FaPlaneDeparture, FaPlaneArrival
@@ -65,7 +65,7 @@ const Navbar = () => {
         const avatars = [
             { id: 'ym1', icon: <FaUser size={16} /> }, { id: 'ym2', icon: <MdPerson size={18} /> }, { id: 'ym3', icon: <FaUserGraduate size={16} /> }, { id: 'ym4', icon: <FaUserAstronaut size={16} /> },
             { id: 'om1', icon: <FaUserTie size={16} /> }, { id: 'om2', icon: <FaUserSecret size={16} /> }, { id: 'om3', icon: <FaUserDoctor size={16} /> }, { id: 'om4', icon: <MdBusiness size={18} /> },
-            { id: 'yl1', icon: <FaPersonDress size={18} /> }, { id: 'yl2', icon: <MdFace size={18} /> }, { id: 'yl3', icon: <FaUserPlus6 size={16} /> }, { id: 'yl4', icon: <MdEmojiPeople size={18} /> },
+            { id: 'yl1', icon: <FaPersonDress size={18} /> }, { id: 'yl2', icon: <MdFace size={18} /> }, { id: 'yl3', icon: <FaUserPlus size={16} /> }, { id: 'yl4', icon: <MdEmojiPeople size={18} /> },
             { id: 'ol1', icon: <FaUserLarge size={16} /> }, { id: 'ol2', icon: <FaUserNinja size={16} /> }, { id: 'ol3', icon: <FaPersonDress size={18} style={{ opacity: 0.8 }} /> }, { id: 'ol4', icon: <FaUserGear size={16} /> },
             { id: 'car1', icon: <FaCar size={16} /> }, { id: 'car2', icon: <FaCarSide size={16} /> }, { id: 'car3', icon: <FaCarOn size={16} /> }, { id: 'car4', icon: <FaCarRear size={16} /> },
             { id: 'truck1', icon: <FaTruck size={16} /> }, { id: 'truck2', icon: <FaTruckFast size={16} /> }, { id: 'truck3', icon: <FaTruckMonster size={16} /> }, { id: 'truck4', icon: <FaVanShuttle size={16} /> },

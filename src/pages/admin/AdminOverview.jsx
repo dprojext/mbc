@@ -11,7 +11,7 @@ import { ResponsiveContainer, AreaChart, Area, XAxis, Tooltip, BarChart, Bar, Ce
 
 const AdminOverview = () => {
     const navigate = useNavigate();
-    const { transactions = [], plans = [], bookings = [], settings, conversations = [], analytics = [], users = [] } = useData();
+    const { transactions = [], plans = [], bookings = [], settings, conversations = [], analytics = [], users = [], currency, setCurrency } = useData();
     const [selectedActivity, setSelectedActivity] = useState(null);
     const [selectedStat, setSelectedStat] = useState(null);
     const [selectedMember, setSelectedMember] = useState(null);
@@ -37,11 +37,19 @@ const AdminOverview = () => {
         const activeInPeriod = filteredUsers.filter(u => u.subscriptionPlan && (u.subscriptionPlan !== 'None' && u.subscriptionPlan !== 'No Plan')).length;
 
         if (label === 'Total Revenue') {
-            const val = filteredTransactions
+            const valUsd = filteredTransactions
                 .filter(t => t.status === 'Completed')
-                .reduce((acc, curr) => acc + curr.amount, 0);
+                .reduce((acc, curr) => acc + (curr.amount_usd || (curr.currency === 'USD' || !curr.currency ? curr.amount : 0)), 0);
+            const valEtb = filteredTransactions
+                .filter(t => t.status === 'Completed')
+                .reduce((acc, curr) => acc + (curr.amount_etb || (curr.currency === 'ETB' ? curr.amount : 0)), 0);
+
             const growth = getGrowth(transactions.filter(t => t.status === 'Completed'), range, 'date');
-            return { value: `$${val.toLocaleString()}`, change: growth };
+            return {
+                value: `$${valUsd.toLocaleString()}`,
+                secondaryValue: `ETB ${valEtb.toLocaleString()}`,
+                change: growth
+            };
         }
         if (label === 'Website Traffic') {
             const growth = getGrowth(analytics, range, 'created_at');
@@ -70,7 +78,10 @@ const AdminOverview = () => {
 
     // Derived Data
     const activeMembers = users.filter(u => u.subscriptionPlan && (u.subscriptionPlan !== 'None' && u.subscriptionPlan !== 'No Plan')).length;
-    const totalRevenue = transactions.filter(t => t.status === 'Completed').reduce((acc, curr) => acc + curr.amount, 0);
+    const totalRevenue = transactions.filter(t => t.status === 'Completed').reduce((acc, curr) => {
+        const amount = currency === 'ETB' ? (curr.amount_etb || curr.amount * 120) : (curr.amount_usd || curr.amount);
+        return acc + amount;
+    }, 0);
     const serviceCounts = (bookings || []).reduce((acc, b) => { if (b?.service) acc[b.service] = (acc[b.service] || 0) + 1; return acc; }, {});
     const popularService = Object.entries(serviceCounts).sort(([, a], [, b]) => b - a)[0]?.[0] || 'N/A';
     const pendingBookings = bookings.filter(b => b.status === 'Pending').length;
@@ -89,19 +100,31 @@ const AdminOverview = () => {
         });
 
         return last6Months.map(m => {
-            const rev = transactions
+            const revUsd = transactions
                 .filter(t => {
                     const d = new Date(t.date);
                     return d.getMonth() === m.month && d.getFullYear() === m.year && t.status === 'Completed';
                 })
-                .reduce((acc, curr) => acc + curr.amount, 0);
+                .reduce((acc, curr) => acc + (curr.amount_usd || (curr.currency === 'USD' || !curr.currency ? curr.amount : 0)), 0);
+
+            const revEtb = transactions
+                .filter(t => {
+                    const d = new Date(t.date);
+                    return d.getMonth() === m.month && d.getFullYear() === m.year && t.status === 'Completed';
+                })
+                .reduce((acc, curr) => acc + (curr.amount_etb || (curr.currency === 'ETB' ? curr.amount : 0)), 0);
 
             const traffic = analytics.filter(e => {
                 const d = new Date(e.created_at);
                 return d.getMonth() === m.month && d.getFullYear() === m.year;
             }).length;
 
-            return { name: m.name, revenue: rev, traffic: traffic };
+            return {
+                name: m.name,
+                revenueUsd: revUsd,
+                revenueEtb: revEtb,
+                traffic
+            };
         });
     }, [transactions, analytics]);
 
@@ -189,16 +212,20 @@ const AdminOverview = () => {
         }
     ];
 
-    const recentActivity = (transactions || []).slice(0, 10).map(trx => ({
-        id: trx.id,
-        text: `Secure payment authorized by ${trx.user}`,
-        user: trx.user,
-        time: new Date(trx.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        type: trx.status === 'Completed' ? 'success' : trx.status === 'Failed' ? 'error' : 'warning',
-        details: `${trx.type} - $${trx.amount}`,
-        email: `${trx.user.toLowerCase().replace(' ', '.')}@member.com`,
-        reference: trx.id
-    }));
+    const recentActivity = (transactions || []).slice(0, 10).map(trx => {
+        const valUsd = trx.amount_usd || trx.amount || 0;
+        const valEtb = trx.amount_etb || (valUsd * 120);
+        return {
+            id: trx.id,
+            text: `Secure payment authorized by ${trx.user}`,
+            user: trx.user,
+            time: new Date(trx.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            type: trx.status === 'Completed' ? 'success' : trx.status === 'Failed' ? 'error' : 'warning',
+            details: `${trx.type} - $${valUsd.toLocaleString()} (ETB ${valEtb.toLocaleString()})`,
+            email: `${trx.user.toLowerCase().replace(' ', '.')}@member.com`,
+            reference: trx.id
+        };
+    });
 
     const memberSpending = transactions.reduce((acc, curr) => {
         if (curr.status === 'Completed') acc[curr.user] = (acc[curr.user] || 0) + curr.amount;
@@ -208,14 +235,19 @@ const AdminOverview = () => {
     const topMembers = Object.entries(memberSpending)
         .sort(([, a], [, b]) => b - a)
         .slice(0, 4)
-        .map(([name, spent], idx) => ({
-            id: idx + 1,
-            name,
-            spent: `$${spent.toLocaleString()}`,
-            avatar: name.charAt(0),
-            email: `${name.toLowerCase().replace(' ', '.')}@member.com`,
-            plan: users.find(u => (u.name || (u.email && u.email.split('@')[0])) === name)?.subscriptionPlan || 'Member'
-        }));
+        .map(([name, spent], idx) => {
+            const user = users.find(u => (u.name || (u.email && u.email.split('@')[0])) === name);
+            const spentUsd = spent;
+            const spentEtb = spent * 120; // Simplified for top members display
+            return {
+                id: idx + 1,
+                name,
+                spent: currency === 'ETB' ? `ETB ${spentEtb.toLocaleString()}` : `$${spentUsd.toLocaleString()}`,
+                avatar: name.charAt(0),
+                email: user?.email || `${name.toLowerCase().replace(' ', '.')}@member.com`,
+                plan: user?.subscriptionPlan || 'Member'
+            };
+        });
 
     const quickActions = [
         { label: 'Add User', icon: <FiUsers />, path: '/admin/users', color: '#4caf50' },
@@ -231,6 +263,22 @@ const AdminOverview = () => {
                 <div>
                     <h1 className="admin-title" style={{ margin: 0 }}>Executive Overview</h1>
                     <p style={{ color: '#666', fontSize: '0.9rem', marginTop: '0.4rem' }}>Business intelligence and system performance metrics.</p>
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(255,255,255,0.03)', padding: '0.4rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', marginLeft: 'auto', marginRight: '1rem' }}>
+                    {['USD', 'ETB'].map(curr => (
+                        <button
+                            key={curr}
+                            onClick={() => setCurrency(curr)}
+                            style={{
+                                padding: '0.4rem 1rem', borderRadius: '8px', border: 'none',
+                                background: currency === curr ? 'var(--color-gold)' : 'transparent',
+                                color: currency === curr ? '#000' : '#888',
+                                fontWeight: '900', fontSize: '0.75rem', cursor: 'pointer', transition: '0.2s'
+                            }}
+                        >
+                            {curr}
+                        </button>
+                    ))}
                 </div>
                 <div style={{ display: 'flex', gap: '1rem', background: 'rgba(255,255,255,0.03)', padding: '0.5rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
                     {['Day', 'Week', 'Month', 'All'].map(range => (
@@ -269,8 +317,13 @@ const AdminOverview = () => {
                                 {stat.change}
                             </div>
                         </div>
-                        <div style={{ fontSize: '1.5rem', fontWeight: '600', color: '#fff', fontFamily: 'var(--font-heading)', lineHeight: 1.2 }}>{stat.value}</div>
-                        <div style={{ color: '#555', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: '700' }}>{stat.label}</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                            <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#fff', fontFamily: 'var(--font-heading)', lineHeight: 1 }}>{stat.value}</div>
+                            {stat.secondaryValue && (
+                                <div style={{ fontSize: '0.7rem', color: 'var(--color-gold)', fontWeight: '900', opacity: 0.8 }}>{stat.secondaryValue}</div>
+                            )}
+                        </div>
+                        <div style={{ color: '#555', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: '700', marginTop: '4px' }}>{stat.label}</div>
                     </div>
                 ))}
             </div>
@@ -280,8 +333,9 @@ const AdminOverview = () => {
                 <div className="admin-card" style={{ padding: '1rem', height: '220px', display: 'flex', flexDirection: 'column' }}>
                     <div className="admin-flex-between" style={{ marginBottom: '1rem' }}>
                         <h3 style={{ color: '#fff', fontSize: '0.85rem', margin: 0, fontWeight: '800' }}>Revenue & Traffic Matrix</h3>
-                        <div style={{ display: 'flex', gap: '0.6rem', fontSize: '0.55rem', color: '#666' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}><span style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--color-gold)' }}></span> REV</div>
+                        <div style={{ display: 'flex', gap: '1rem', fontSize: '0.55rem', color: '#666' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}><span style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--color-gold)' }}></span> USD REV</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}><span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#ff9800' }}></span> ETB REV</div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}><span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#4caf50' }}></span> TRAFFIC</div>
                         </div>
                     </div>
@@ -293,13 +347,22 @@ const AdminOverview = () => {
                                         <stop offset="5%" stopColor="var(--color-gold)" stopOpacity={0.2} />
                                         <stop offset="95%" stopColor="var(--color-gold)" stopOpacity={0} />
                                     </linearGradient>
+                                    <linearGradient id="colorRevEtb" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#ff9800" stopOpacity={0.15} />
+                                        <stop offset="95%" stopColor="#ff9800" stopOpacity={0} />
+                                    </linearGradient>
+                                    <linearGradient id="colorTraffic" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#4caf50" stopOpacity={0.1} />
+                                        <stop offset="95%" stopColor="#4caf50" stopOpacity={0} />
+                                    </linearGradient>
                                 </defs>
                                 <XAxis dataKey="name" hide />
                                 <Tooltip
                                     contentStyle={{ background: 'var(--admin-sidebar-bg)', border: '1px solid var(--admin-border)', borderRadius: '10px', fontSize: '0.7rem' }}
                                 />
-                                <Area type="monotone" dataKey="revenue" stroke="var(--color-gold)" fillOpacity={1} fill="url(#colorRev)" strokeWidth={2} />
-                                <Area type="monotone" dataKey="traffic" stroke="#4caf50" fillOpacity={0} strokeWidth={1.5} />
+                                <Area type="monotone" dataKey="revenueUsd" stroke="var(--color-gold)" fillOpacity={1} fill="url(#colorRev)" strokeWidth={2} />
+                                <Area type="monotone" dataKey="revenueEtb" stroke="#ff9800" fillOpacity={1} fill="url(#colorRevEtb)" strokeWidth={1.5} strokeDasharray="5 5" />
+                                <Area type="monotone" dataKey="traffic" stroke="#4caf50" fillOpacity={1} fill="url(#colorTraffic)" strokeWidth={1} />
                             </AreaChart>
                         </ResponsiveContainer>
                     </div>

@@ -5,7 +5,7 @@ import { FiPlus, FiEdit2, FiTrash2, FiCheck, FiX, FiLayers, FiDollarSign, FiArro
 import { motion, AnimatePresence } from 'framer-motion';
 
 const AdminSubscriptions = () => {
-    const { plans = [], addPlan, updatePlan, deletePlan, users = [], transactions = [] } = useData();
+    const { plans = [], addPlan, updatePlan, deletePlan, users = [], transactions = [], currency, setCurrency } = useData();
     const { showToast } = useToast();
     const [editingPlan, setEditingPlan] = useState(null);
     const [deletingPlan, setDeletingPlan] = useState(null);
@@ -13,27 +13,37 @@ const AdminSubscriptions = () => {
 
     const stats = React.useMemo(() => {
         const subTrx = transactions.filter(t => t.category === 'Subscription' && (t.status === 'Completed' || t.status === 'Paid'));
-        const totalRevenue = subTrx.reduce((acc, t) => acc + (t.amount || 0), 0);
+        const totalRevenue = subTrx.reduce((acc, t) => {
+            const amount = currency === 'ETB' ? (t.amount_etb || (t.amount_usd || t.amount || 0) * 120) : (t.amount_usd || t.amount || 0);
+            return acc + amount;
+        }, 0);
         const activeSubscribers = users.filter(u => u.subscriptionPlan && u.subscriptionPlan !== 'None').length;
         return {
             totalRevenue,
             activeSubscribers,
             planCount: plans.length
         };
-    }, [transactions, users, plans]);
+    }, [transactions, users, plans, currency]);
 
     const handleSave = async () => {
         try {
+            const planData = {
+                ...editingPlan,
+                price: editingPlan.price_usd || editingPlan.price,
+                price_usd: editingPlan.price_usd || editingPlan.price,
+                price_etb: editingPlan.price_etb
+            };
+
             if (isCreating) {
                 const payload = {
-                    ...editingPlan,
+                    ...planData,
                     id: `plan-${Date.now()}`,
                     active_users: 0
                 };
                 await addPlan(payload);
                 showToast('New subscription model deployed successfully.', 'success');
             } else {
-                await updatePlan(editingPlan);
+                await updatePlan(planData);
                 showToast('Subscription model synchronized.', 'success');
             }
             setEditingPlan(null);
@@ -76,7 +86,11 @@ const AdminSubscriptions = () => {
                                     </div>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem' }}>
-                                    <span style={{ color: 'var(--color-gold)', fontSize: '2.8rem', fontWeight: '900', fontFamily: 'var(--font-heading)' }}>${plan.price}</span>
+                                    <span style={{ color: 'var(--color-gold)', fontSize: '2.8rem', fontWeight: '900', fontFamily: 'var(--font-heading)' }}>
+                                        {currency === 'ETB'
+                                            ? (plan.price_etb ? `ETB ${plan.price_etb}` : `~ETB ${(parseFloat(plan.price_usd || plan.price || 0) * 120).toLocaleString()}`)
+                                            : `$${plan.price_usd || plan.price}`}
+                                    </span>
                                     <span style={{ color: '#666', fontSize: '1rem', fontWeight: '600' }}>/{type === 'subscription' ? 'MO' : 'ONCE'}</span>
                                 </div>
                             </div>
@@ -112,7 +126,23 @@ const AdminSubscriptions = () => {
                     <h1 className="admin-title" style={{ margin: 0 }}>Subscription Command</h1>
                     <p style={{ color: '#666', fontSize: '0.95rem', marginTop: '0.6rem' }}>Configure high-fidelity subscription tiers and recurring revenue architecture.</p>
                 </div>
-                <button className="btn btn-primary" onClick={() => { setEditingPlan({ name: '', price: '', type: 'subscription', features: [''], currency: 'USD' }); setIsCreating(true); }} style={{ padding: '1rem 2rem', borderRadius: '15px', fontWeight: '900', fontSize: '0.9rem', letterSpacing: '0.1em' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(255,255,255,0.03)', padding: '0.4rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', marginLeft: 'auto', marginRight: '1rem' }}>
+                    {['USD', 'ETB'].map(curr => (
+                        <button
+                            key={curr}
+                            onClick={() => setCurrency(curr)}
+                            style={{
+                                padding: '0.4rem 1rem', borderRadius: '8px', border: 'none',
+                                background: currency === curr ? 'var(--color-gold)' : 'transparent',
+                                color: currency === curr ? '#000' : '#888',
+                                fontWeight: '900', fontSize: '0.75rem', cursor: 'pointer', transition: '0.2s'
+                            }}
+                        >
+                            {curr}
+                        </button>
+                    ))}
+                </div>
+                <button className="btn btn-primary" onClick={() => { setEditingPlan({ name: '', price_usd: '', price_etb: '', type: 'subscription', features: [''], currency: 'USD' }); setIsCreating(true); }} style={{ padding: '1rem 2rem', borderRadius: '15px', fontWeight: '900', fontSize: '0.9rem', letterSpacing: '0.1em' }}>
                     <FiPlus /> DEPLOY NEW TIER
                 </button>
             </header>
@@ -130,7 +160,7 @@ const AdminSubscriptions = () => {
                     <div style={{ width: '60px', height: '60px', background: 'rgba(76,175,80,0.1)', color: '#4caf50', borderRadius: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><FiDollarSign size={24} /></div>
                     <div>
                         <div style={{ color: '#444', fontSize: '0.7rem', fontWeight: '900', textTransform: 'uppercase', marginBottom: '0.2rem' }}>Cumulative Sub Revenue</div>
-                        <div style={{ color: '#fff', fontSize: '2rem', fontWeight: '800' }}>${stats.totalRevenue.toLocaleString()}</div>
+                        <div style={{ color: '#fff', fontSize: '2rem', fontWeight: '800' }}>{currency === 'ETB' ? 'ETB ' : '$'}{stats.totalRevenue.toLocaleString()}</div>
                     </div>
                 </div>
                 <div className="admin-card" style={{ padding: '2rem', display: 'flex', alignItems: 'center', gap: '1.5rem', background: 'rgba(255,255,255,0.02)' }}>
@@ -182,22 +212,26 @@ const AdminSubscriptions = () => {
                                         <label style={{ color: '#888', fontSize: '0.65rem', fontWeight: '900', textTransform: 'uppercase', marginBottom: '0.8rem', display: 'block' }}>Model Primary Title</label>
                                         <input placeholder="e.g. Diamond Executive Membership" value={editingPlan?.name || ''} onChange={e => setEditingPlan({ ...editingPlan, name: e.target.value })} style={{ padding: '1.2rem', width: '100%', background: 'rgba(255,255,255,0.03)', border: '1px solid #222', borderRadius: '15px', color: '#fff', fontSize: '1.1rem', fontWeight: '700' }} />
                                     </div>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                         <div className="admin-field">
-                                            <label style={{ color: '#888', fontSize: '0.65rem', fontWeight: '900', textTransform: 'uppercase', marginBottom: '0.8rem', display: 'block' }}>Unit Price ($)</label>
-                                            <input placeholder="99.99" value={editingPlan?.price || ''} onChange={e => setEditingPlan({ ...editingPlan, price: e.target.value })} style={{ padding: '1.2rem', width: '100%', background: 'rgba(255,255,255,0.03)', border: '1px solid #222', borderRadius: '15px', color: 'var(--color-gold)', fontSize: '1.1rem', fontWeight: '900', textAlign: 'center' }} />
+                                            <label style={{ color: '#888', fontSize: '0.65rem', fontWeight: '900', textTransform: 'uppercase', marginBottom: '0.8rem', display: 'block' }}>USD Price ($)</label>
+                                            <input placeholder="99.99" value={editingPlan?.price_usd || ''} onChange={e => setEditingPlan({ ...editingPlan, price_usd: e.target.value })} style={{ padding: '1.2rem', width: '100%', background: 'rgba(255,255,255,0.03)', border: '1px solid #222', borderRadius: '15px', color: 'var(--color-gold)', fontSize: '1.1rem', fontWeight: '900', textAlign: 'center' }} />
                                         </div>
                                         <div className="admin-field">
-                                            <label style={{ color: '#888', fontSize: '0.65rem', fontWeight: '900', textTransform: 'uppercase', marginBottom: '0.8rem', display: 'block' }}>Revenue Logic</label>
-                                            <select
-                                                value={editingPlan?.type || 'subscription'}
-                                                onChange={e => setEditingPlan({ ...editingPlan, type: e.target.value })}
-                                                style={{ width: '100%', background: 'rgba(255,255,255,0.03)', border: '1px solid #c9a96a44', borderRadius: '15px', height: '58px', color: '#fff', paddingLeft: '1.2rem', appearance: 'auto' }}
-                                            >
-                                                <option value="subscription">Recurring Subscription</option>
-                                                <option value="one-time">One-Time Pack</option>
-                                            </select>
+                                            <label style={{ color: '#888', fontSize: '0.65rem', fontWeight: '900', textTransform: 'uppercase', marginBottom: '0.8rem', display: 'block' }}>ETB Price (BR)</label>
+                                            <input placeholder="12000" value={editingPlan?.price_etb || ''} onChange={e => setEditingPlan({ ...editingPlan, price_etb: e.target.value })} style={{ padding: '1.2rem', width: '100%', background: 'rgba(255,255,255,0.03)', border: '1px solid #222', borderRadius: '15px', color: '#4caf50', fontSize: '1.1rem', fontWeight: '900', textAlign: 'center' }} />
                                         </div>
+                                    </div>
+                                    <div className="admin-field">
+                                        <label style={{ color: '#888', fontSize: '0.65rem', fontWeight: '900', textTransform: 'uppercase', marginBottom: '0.8rem', display: 'block' }}>Revenue Logic</label>
+                                        <select
+                                            value={editingPlan?.type || 'subscription'}
+                                            onChange={e => setEditingPlan({ ...editingPlan, type: e.target.value })}
+                                            style={{ width: '100%', background: 'rgba(255,255,255,0.03)', border: '1px solid #c9a96a44', borderRadius: '15px', height: '58px', color: '#fff', paddingLeft: '1.2rem', appearance: 'auto' }}
+                                        >
+                                            <option value="subscription">Recurring Subscription</option>
+                                            <option value="one-time">One-Time Pack</option>
+                                        </select>
                                     </div>
                                     <div style={{ background: 'rgba(255,255,255,0.01)', padding: '2rem', borderRadius: '25px', border: '1px solid rgba(255,255,255,0.03)' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', color: '#888', fontSize: '0.85rem', lineHeight: '1.6' }}>

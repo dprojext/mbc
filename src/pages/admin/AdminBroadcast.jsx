@@ -325,7 +325,7 @@ const AdminBroadcast = () => {
                                 <div style={{ borderTop: '1px solid rgba(251,191,36,0.2)', paddingTop: '2.5rem', marginTop: '4rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <div style={{ fontSize: '0.8rem', color: 'var(--color-gold)', fontWeight: '900', letterSpacing: '0.1em', textTransform: 'uppercase', opacity: 0.4 }}>Authorized Signatory: MBC ADMIN CMD</div>
                                     <button
-                                        onClick={handleBroadcast}
+                                        onClick={() => openConfirm('DISPATCH AUTHORIZATION', 'Verify outgoing broadcast payload and authorized audience vector? This will initiate systemic outreach.', handleBroadcast)}
                                         disabled={isSending || !notifTitle || !notifMessage}
                                         style={{
                                             background: 'var(--color-gold)',

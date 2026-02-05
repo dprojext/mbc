@@ -14,6 +14,9 @@ export const AuthProvider = ({ children }) => {
                     u.role = 'admin';
                     u.name = u.name || 'MBC Admin';
                 }
+                if (u && !u.profileImg) {
+                    u.profileImg = u.user_metadata?.profile_img || u.profile_img;
+                }
                 return u;
             } catch (e) {
                 return null;
@@ -47,7 +50,8 @@ export const AuthProvider = ({ children }) => {
                     // Fetch profile to get role and saved data
                     // Use a safer select to avoid 400 errors if columns are missing
                     try {
-                        const profileRes = await fetch(`https://khrsyauspfdszripxetm.supabase.co/rest/v1/profiles?id=eq.${userData.id}`, {
+                        // Fetch profile with cache-busting to ensure latest data
+                        const profileRes = await fetch(`https://khrsyauspfdszripxetm.supabase.co/rest/v1/profiles?id=eq.${userData.id}&t=${Date.now()}`, {
                             headers: {
                                 'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtocnN5YXVzcGZkc3pyaXB4ZXRtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwODM2MDQsImV4cCI6MjA4NDY1OTYwNH0.nyRZeQF0_ZCqEKgmpa1kglzsnPVSuEJjOZlCf-NXahE',
                                 'Authorization': `Bearer ${storedToken}`
@@ -59,17 +63,35 @@ export const AuthProvider = ({ children }) => {
                             if (profiles?.[0]) {
                                 const p = profiles[0];
                                 console.log("[AUTH] Restored executive profile for:", p.display_name);
+                                const secondaryCache = localStorage.getItem(`executive_img_${userData.id}`);
+                                const serverImg = p.avatar_url;
+
+                                // INTELLIGENT MERGE: Prioritize custom images (data:) over icon IDs (strings like 'ym1')
+                                let finalImg = serverImg;
+                                if (!serverImg || !serverImg.startsWith('data:')) {
+                                    if (secondaryCache && secondaryCache.startsWith('data:')) {
+                                        finalImg = secondaryCache;
+                                    } else if (userData.profileImg && userData.profileImg.startsWith('data:')) {
+                                        finalImg = userData.profileImg;
+                                    }
+                                }
+
                                 const completeUser = {
                                     ...userData,
                                     role: p.role || userData.role || 'user',
                                     name: p.display_name || userData.name,
                                     phone: p.phone,
-                                    profileImg: p.profile_img,
+                                    profileImg: finalImg || serverImg || userData.profileImg || userData.user_metadata?.profile_img,
                                     subscriptionPlan: p.subscription_plan,
                                     savedVehicles: p.saved_vehicles || [],
                                     savedAddresses: p.saved_addresses || [],
                                     requiresPasswordChange: p.requires_password_change || false
                                 };
+
+                                // Update secondary cache if we got a new image from the server
+                                if (p.avatar_url && p.avatar_url.startsWith('data:')) {
+                                    localStorage.setItem(`executive_img_${userData.id}`, p.avatar_url);
+                                }
 
                                 // FORCE ADMIN: Ensure fallback email always maintains admin status
                                 if (userData.email === 'mbc@db.com') completeUser.role = 'admin';
@@ -235,19 +257,39 @@ export const AuthProvider = ({ children }) => {
                 .single();
 
             if (profile) {
+                const secondaryCache = localStorage.getItem(`executive_img_${user.id}`);
+                const serverImg = profile.avatar_url;
+
+                // INTELLIGENT MERGE: Favor custom uploads over database icons during sync
+                let finalImg = serverImg;
+                if (!serverImg || !serverImg.startsWith('data:')) {
+                    if (secondaryCache && secondaryCache.startsWith('data:')) {
+                        finalImg = secondaryCache;
+                    } else if (user.profileImg && user.profileImg.startsWith('data:')) {
+                        finalImg = user.profileImg;
+                    }
+                }
+
                 const updatedUser = {
                     ...user,
                     role: profile.role,
                     name: profile.display_name,
                     phone: profile.phone,
-                    profileImg: profile.profile_img,
-                    subscriptionPlan: profile.subscription_plan,
+                    profileImg: finalImg || serverImg || user.profileImg || user.user_metadata?.profile_img,
                     savedVehicles: profile.saved_vehicles || [],
                     savedAddresses: profile.saved_addresses || [],
                     requiresPasswordChange: profile.requires_password_change
                 };
+
+                // Sync to secondary cache if we have a real custom image
+                if (finalImg && finalImg.startsWith('data:')) {
+                    localStorage.setItem(`executive_img_${user.id}`, finalImg);
+                }
+
                 localStorage.setItem('supabase_user', JSON.stringify(updatedUser));
                 setUser(updatedUser);
+            } else {
+                console.warn("[AUTH] Profile refresh source returned no data");
             }
         } catch (err) { console.error("[AUTH] Refresh Profile Error:", err); }
     };

@@ -8,7 +8,7 @@ import { Link } from 'react-router-dom';
 const UserOverview = () => {
     const { user } = useAuth();
     const data = useData() || {};
-    const { bookings = [], userNotifications = [], plans = [] } = data;
+    const { bookings = [], userNotifications = [], plans = [], currency, setCurrency } = data;
 
     // Data filtering
     const myBookings = bookings.filter(b => b.customer_id === user?.id || b.email === user?.email);
@@ -21,34 +21,57 @@ const UserOverview = () => {
 
     const calculateTotalSpent = () => {
         return myBookings.reduce((acc, booking) => {
+            let amount = 0;
             const p = booking.price;
             const isValidPrice = p !== null && p !== undefined && String(p) !== 'null' && String(p) !== 'undefined' && String(p) !== '';
 
             if (isValidPrice) {
                 const matches = String(p).match(/\d+/);
-                return acc + (matches ? Number(matches[0]) : 0);
+                amount = matches ? Number(matches[0]) : 0;
+            } else {
+                const svc = (data.services || []).find(s => s.title === booking.service);
+                if (svc) {
+                    const matches = String(svc.price).match(/\d+/);
+                    amount = matches ? Number(matches[0]) : 0;
+                }
             }
 
-            const svc = (data.services || []).find(s => s.title === booking.service);
-            if (svc) {
-                const matches = String(svc.price).match(/\d+/);
-                return acc + (matches ? Number(matches[0]) : 0);
+            // Convert based on selected currency
+            if (currency === 'ETB') {
+                return acc + (booking.amount_etb || amount * 120);
             }
-
-            return acc;
+            return acc + (booking.amount_usd || amount);
         }, 0);
     };
 
     const stats = [
         { label: 'Upcoming Wash', value: nextWash ? `${nextWash.date} @ ${nextWash.time}` : 'None', icon: <FiCalendar />, color: 'var(--color-gold)' },
         { label: 'Current Plan', value: activeSubscription.toUpperCase(), icon: <FiStar />, color: 'var(--color-gold)' },
-        { label: 'Assets Spent', value: `$${calculateTotalSpent().toLocaleString()}`, icon: <FiCreditCard />, color: 'var(--color-gold)' },
+        { label: 'Assets Spent', value: `${currency === 'ETB' ? 'ETB ' : '$'}${calculateTotalSpent().toLocaleString()}`, icon: <FiCreditCard />, color: 'var(--color-gold)' },
         { label: 'Alerts', value: userNotifications.filter(n => n.user_id === user?.id && !n.read).length, icon: <FiBell />, color: 'var(--color-gold)' }
     ];
 
     return (
         <div className="user-overview">
             {/* Header removed: handled by UserDashboard executive header */}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1.5rem', gap: '0.5rem' }}>
+                {['USD', 'ETB'].map(curr => (
+                    <button
+                        key={curr}
+                        onClick={() => setCurrency(curr)}
+                        style={{
+                            padding: '0.4rem 1rem', borderRadius: '8px', border: 'none',
+                            background: currency === curr ? 'var(--color-gold)' : 'rgba(255,255,255,0.03)',
+                            color: currency === curr ? '#000' : '#888',
+                            fontWeight: '900', fontSize: '0.7rem', cursor: 'pointer', transition: '0.2s',
+                            boxShadow: currency === curr ? '0 4px 12px rgba(201,169,106,0.3)' : 'none'
+                        }}
+                    >
+                        {curr}
+                    </button>
+                ))}
+            </div>
 
             <div style={{
                 display: 'grid',

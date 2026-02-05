@@ -12,7 +12,7 @@ export const DataProvider = ({ children }) => {
         tagline: 'Luxury Car Care, Wherever You Are.',
         description: 'Experience unparalleled automotive excellence with our premium mobile detailing services.',
         legalText: '© 2026 Metro Blackline Care. All rights reserved.',
-        logo: 'M',
+        logo: '/images/logo.png',
         favicon: '●',
         colors: { primary: '#c9a96a', secondary: '#1a1a1a', accent: '#ffffff', background: '#0a0a0a' },
         typography: 'Nunito',
@@ -74,6 +74,12 @@ export const DataProvider = ({ children }) => {
     const [dataExports, setDataExports] = useState([]);
     const [session, setSession] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [currency, setCurrency] = useState(() => localStorage.getItem('dashboard_currency') || 'USD');
+
+    // Persistence for currency preference
+    useEffect(() => {
+        localStorage.setItem('dashboard_currency', currency);
+    }, [currency]);
 
     // --- Auth Session Management ---
     useEffect(() => {
@@ -247,6 +253,7 @@ export const DataProvider = ({ children }) => {
                     setUsers(fetchedUsers.map(u => ({
                         ...u,
                         name: u.display_name || 'Anonymous',
+                        profileImg: u.avatar_url,
                         savedVehicles: Array.isArray(u.saved_vehicles) ? u.saved_vehicles : [],
                         savedAddresses: Array.isArray(u.saved_addresses) ? u.saved_addresses : [],
                         subscriptionPlan: u.plan || u.subscription_plan || 'None',
@@ -729,6 +736,9 @@ export const DataProvider = ({ children }) => {
             user_name: trx.user || trx.userName || 'Guest',
             user_id: trx.userId || null,
             amount: Number(trx.amount),
+            amount_usd: trx.amount_usd !== undefined ? Number(trx.amount_usd) : (trx.currency === 'USD' || !trx.currency ? Number(trx.amount) : 0),
+            amount_etb: trx.amount_etb !== undefined ? Number(trx.amount_etb) : (trx.currency === 'ETB' ? Number(trx.amount) : 0),
+            currency: trx.currency || 'USD',
             category: trx.category || 'Service',
             item_id: trx.itemId || null,
             item_name: trx.item || trx.itemName || null,
@@ -751,7 +761,10 @@ export const DataProvider = ({ children }) => {
                     paymentMethod: data.payment_method,
                     referenceNo: data.reference_no,
                     itemId: data.item_id,
-                    item: data.item_name
+                    item: data.item_name,
+                    amount_usd: data.amount_usd,
+                    amount_etb: data.amount_etb,
+                    currency: data.currency
                 };
                 setTransactions(prev => [mappedTrx, ...prev]);
 
@@ -777,6 +790,9 @@ export const DataProvider = ({ children }) => {
         const payload = {
             user_name: updated.user || updated.userName,
             amount: Number(updated.amount),
+            amount_usd: updated.amount_usd !== undefined ? Number(updated.amount_usd) : (updated.currency === 'USD' ? Number(updated.amount) : 0),
+            amount_etb: updated.amount_etb !== undefined ? Number(updated.amount_etb) : (updated.currency === 'ETB' ? Number(updated.amount) : 0),
+            currency: updated.currency,
             category: updated.category,
             item_id: String(updated.itemId || ''),
             payment_method: updated.paymentMethod,
@@ -1041,13 +1057,26 @@ export const DataProvider = ({ children }) => {
         } catch (err) { console.error("Send User Notif Error:", err); }
     };
 
-    const clearUserNotifications = async () => {
+    const clearUserNotifications = async (userId) => {
         try {
-            const userId = session?.user?.id;
-            if (!userId) return;
-            await supabase.from('notifications').delete().eq('user_id', userId);
-            setUserNotifications(prev => prev.filter(n => n.user_id !== userId));
-        } catch (err) { console.error("Clear User Notifs Error:", err); }
+            const targetUserId = userId || session?.user?.id;
+            if (!targetUserId) {
+                console.warn("No user ID available for clearing notifications");
+                return;
+            }
+
+            // Optimistic UI update - immediately clear from state
+            setUserNotifications(prev => prev.filter(n => n.user_id !== targetUserId));
+
+            // Then delete from database
+            const { error } = await supabase.from('notifications').delete().eq('user_id', targetUserId);
+            if (error) {
+                console.error("Database clear error:", error);
+                // Could refetch here if needed, but optimistic update is usually fine
+            }
+        } catch (err) {
+            console.error("Clear User Notifs Error:", err);
+        }
     };
 
     const purgeSystemData = async () => {
@@ -1152,7 +1181,9 @@ export const DataProvider = ({ children }) => {
             editMessage, deleteMessage,
             purgeSystemData,
             session,
-            loading
+            loading,
+            currency,
+            setCurrency
         }}>
             {children}
         </DataContext.Provider>

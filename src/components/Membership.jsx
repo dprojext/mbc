@@ -3,10 +3,10 @@ import { motion } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 import ConciergeModal from './ConciergeModal';
-import { FiStar, FiCheckCircle, FiMessageSquare } from 'react-icons/fi';
+import { FiStar, FiCheckCircle, FiMessageSquare, FiLink } from 'react-icons/fi';
 
 const Membership = () => {
-    const { plans = [], settings = {} } = useData();
+    const { plans = [], services = [], settings = {} } = useData();
     const navigate = useNavigate();
     const [isConciergeOpen, setIsConciergeOpen] = useState(false);
     const [conciergeData, setConciergeData] = useState({ name: '', price: '' });
@@ -145,6 +145,28 @@ const Membership = () => {
                                             <span>{feature}</span>
                                         </li>
                                     ))}
+                                    {/* Linked Services */}
+                                    {services.filter(s => (s.includedInPlans || []).includes(plan.id)).map(service => (
+                                        <li key={`svc-${service.id}`}>
+                                            <FiLink style={{ color: 'var(--color-gold)', fontSize: '0.9rem', flexShrink: 0, marginTop: '4px' }} />
+                                            <a
+                                                href="#services"
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    const element = document.getElementById('services');
+                                                    if (element) {
+                                                        element.scrollIntoView({ behavior: 'smooth' });
+                                                        // Note: We could also highlight the specific service if we had its ID
+                                                    }
+                                                }}
+                                                style={{ color: 'var(--color-gold)', textDecoration: 'none', fontWeight: '600', borderBottom: '1px dashed rgba(201,169,106,0.3)', transition: '0.2s' }}
+                                                onMouseOver={(e) => e.target.style.borderBottomColor = 'var(--color-gold)'}
+                                                onMouseOut={(e) => e.target.style.borderBottomColor = 'rgba(201,169,106,0.3)'}
+                                            >
+                                                {service.title} (Included)
+                                            </a>
+                                        </li>
+                                    ))}
                                 </ul>
                                 <button
                                     onClick={() => {
@@ -186,7 +208,7 @@ const Membership = () => {
                 itemName={conciergeData.name}
                 itemPrice={conciergeData.price}
             />
-        </section>
+        </section >
     );
 };
 

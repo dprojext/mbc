@@ -1,11 +1,11 @@
 import React, { useState, useRef } from 'react';
 import { useData } from '../../context/DataContext';
 import { useToast } from '../../context/ToastContext';
-import { FiPlus, FiEdit2, FiTrash2, FiX, FiCheck, FiSave, FiAward, FiEye, FiStar, FiShoppingCart, FiDollarSign } from 'react-icons/fi';
+import { FiPlus, FiEdit2, FiTrash2, FiX, FiCheck, FiSave, FiAward, FiEye, FiStar, FiShoppingCart, FiDollarSign, FiLayers, FiLink } from 'react-icons/fi';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const AdminServices = () => {
-    const { services = [], bookings = [], addService, updateService, deleteService } = useData();
+    const { services = [], plans = [], bookings = [], addService, updateService, deleteService, currency, setCurrency } = useData();
     const { showToast } = useToast();
     const [editingService, setEditingService] = useState(null);
     const [deletingService, setDeletingService] = useState(null);
@@ -13,7 +13,7 @@ const AdminServices = () => {
     const fileInputRef = useRef(null);
 
     // Calculate service statistics from bookings
-    const [statsFilter, setStatsFilter] = useState('MONTH');
+    const [statsFilter, setStatsFilter] = useState('Month');
 
     const filterByStatsRange = (list) => {
         const now = new Date();
@@ -33,8 +33,8 @@ const AdminServices = () => {
     const completedServiceBookings = filteredBookings.filter(b => b.status === 'completed' || b.status === 'Approved');
 
     const statsRevenue = completedServiceBookings.reduce((acc, b) => {
-        const price = parseFloat(String(b.total || b.price || 0).replace(/[^0-9.]/g, '')) || 0;
-        return acc + price;
+        const amount = currency === 'ETB' ? (b.amount_etb || (b.amount_usd || b.price || 0) * 120) : (b.amount_usd || b.amount || b.price || 0);
+        return acc + (parseFloat(String(amount).replace(/[^0-9.]/g, '')) || 0);
     }, 0);
 
     const statsCount = filteredBookings.length;
@@ -45,16 +45,17 @@ const AdminServices = () => {
             // Auto-format price to include "From" if it's just a number or starts with $
             let formattedPrice = editingService.price || '';
             const priceStr = String(formattedPrice).trim();
-            // If price is just a number or starts with $, prepend "From "
             if (priceStr && !priceStr.toLowerCase().startsWith('from')) {
-                if (/^\$?\d/.test(priceStr)) {
-                    formattedPrice = priceStr.startsWith('$') ? `From ${priceStr}` : `From $${priceStr}`;
+                if (/^\d/.test(priceStr)) {
+                    formattedPrice = `From $${priceStr}`;
                 }
             }
 
             const serviceData = {
                 ...editingService,
-                price: formattedPrice
+                price: formattedPrice,
+                price_usd: editingService.price_usd || parseFloat(String(formattedPrice).replace(/[^0-9.]/g, '')),
+                price_etb: editingService.price_etb
             };
 
             if (isCreating) {
@@ -111,7 +112,7 @@ const AdminServices = () => {
                 <button
                     className="btn btn-primary"
                     onClick={() => {
-                        setEditingService({ title: '', price: '', description: '', features: [''], featured: false, image: '/images/service-wash.jpg' });
+                        setEditingService({ title: '', price: '', description: '', features: [''], featured: false, image: '/images/service-wash.jpg', includedInPlans: [] });
                         setIsCreating(true);
                     }}
                 >
@@ -129,13 +130,13 @@ const AdminServices = () => {
                             ))}
                         </div>
                     </div>
-                    <div style={{ fontSize: '1.8rem', fontWeight: '800', color: '#fff' }}>${statsRevenue.toLocaleString()}</div>
+                    <div style={{ fontSize: '1.8rem', fontWeight: '800', color: '#fff' }}>{currency === 'ETB' ? 'ETB ' : '$'}{statsRevenue.toLocaleString()}</div>
                     <div style={{ color: '#444', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '2px', fontWeight: '900', marginTop: '0.4rem' }}>{statsFilter} Revenue</div>
                 </div>
                 <div className="admin-stat-card">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                         <div style={{ width: '40px', height: '40px', background: 'rgba(76,175,80,0.1)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4caf50' }}><FiShoppingCart /></div>
-                        <div style={{ color: '#4caf50', fontSize: '0.7rem', fontWeight: 'bold' }}>{statsGrowth}</div>
+                        <div style={{ color: '#4caf50', fontSize: '0.8rem', fontWeight: '900', background: 'rgba(76,175,80,0.1)', padding: '4px 8px', borderRadius: '6px' }}>{statsGrowth}</div>
                     </div>
                     <div style={{ fontSize: '1.8rem', fontWeight: '800', color: '#fff' }}>{statsCount}</div>
                     <div style={{ color: '#444', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '2px', fontWeight: '900', marginTop: '0.4rem' }}>Total Sales</div>
@@ -170,10 +171,12 @@ const AdminServices = () => {
                         <div style={{ padding: '2rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
                             <div className="admin-flex-between">
                                 <h3 style={{ color: '#fff', fontSize: '1.4rem', margin: 0, fontWeight: '800', fontFamily: 'var(--font-heading)' }}>{service.title}</h3>
-                                <div style={{ color: 'var(--color-gold)', fontWeight: '900', fontSize: '1.3rem' }}>
-                                    {String(service.price).startsWith('$') || String(service.price).toLowerCase().includes('from')
-                                        ? service.price
-                                        : `$${service.price}`}
+                                <div style={{ color: 'var(--color-gold)', fontWeight: '900', fontSize: '1.3rem', textAlign: 'right' }}>
+                                    {currency === 'ETB' ? (
+                                        service.price_etb ? `From ETB ${service.price_etb}` : `~ETB ${(parseFloat(String(service.price_usd || service.price || 0).replace(/[^0-9.]/g, '')) * 120).toLocaleString()}`
+                                    ) : (
+                                        service.price_usd ? `From $${service.price_usd}` : (String(service.price).startsWith('$') || String(service.price).toLowerCase().includes('from') ? service.price : `$${service.price}`)
+                                    )}
                                 </div>
                             </div>
 
@@ -283,7 +286,7 @@ const AdminServices = () => {
                                         </button>
                                     </div>
 
-                                    <div style={{ marginTop: '2.5rem', padding: '1.5rem', background: 'rgba(251,191,36,0.02)', borderRadius: '20px', border: '1px solid rgba(251,191,36,0.05)' }}>
+                                    <div style={{ marginTop: '2rem', padding: '1.5rem', background: 'rgba(251,191,36,0.02)', borderRadius: '20px', border: '1px solid rgba(251,191,36,0.05)' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                                             <input
                                                 type="checkbox"
@@ -296,18 +299,49 @@ const AdminServices = () => {
                                         </div>
                                         <p style={{ color: '#444', fontSize: '0.75rem', marginTop: '0.8rem', margin: '0.8rem 0 0 32px' }}>Featured services are highlighted at the top of the booking gallery.</p>
                                     </div>
+
+                                    {/* Subscription Association */}
+                                    <div style={{ marginTop: '2rem', padding: '1.5rem', background: 'rgba(255,255,255,0.01)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.03)' }}>
+                                        <div style={{ color: 'var(--color-gold)', fontSize: '0.65rem', fontWeight: '900', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <FiLayers /> Include in Subscriptions
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                                            {plans.filter(p => p.type === 'subscription').map(plan => (
+                                                <div key={plan.id} style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                                    <input
+                                                        type="checkbox"
+                                                        id={`plan-${plan.id}`}
+                                                        checked={(editingService.includedInPlans || []).includes(plan.id)}
+                                                        onChange={(e) => {
+                                                            const currentPlans = editingService.includedInPlans || [];
+                                                            const newPlans = e.target.checked
+                                                                ? [...currentPlans, plan.id]
+                                                                : currentPlans.filter(id => id !== plan.id);
+                                                            setEditingService({ ...editingService, includedInPlans: newPlans });
+                                                        }}
+                                                        style={{ width: '18px', height: '18px', accentColor: 'var(--color-gold)' }}
+                                                    />
+                                                    <label htmlFor={`plan-${plan.id}`} style={{ color: '#aaa', fontSize: '0.85rem', cursor: 'pointer' }}>{plan.name}</label>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
                                 </div>
 
                                 {/* Details Side */}
                                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 140px', gap: '1.5rem', marginBottom: '1.5rem' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px 120px', gap: '1rem', marginBottom: '1.5rem' }}>
                                         <div className="admin-field">
                                             <label style={{ color: '#444', fontSize: '0.65rem', fontWeight: '900', textTransform: 'uppercase', marginBottom: '0.8rem', display: 'block' }}>Package Title</label>
                                             <input placeholder="e.g. Signature Diamond Detail" value={editingService.title} onChange={e => setEditingService({ ...editingService, title: e.target.value })} style={{ padding: '1.2rem', width: '100%', background: 'rgba(255,255,255,0.01)', border: '1px solid #1a1a1a', borderRadius: '15px', color: '#fff', fontSize: '1.1rem', fontWeight: '700' }} />
                                         </div>
                                         <div className="admin-field">
-                                            <label style={{ color: '#444', fontSize: '0.65rem', fontWeight: '900', textTransform: 'uppercase', marginBottom: '0.8rem', display: 'block' }}>Pricing / Rate</label>
-                                            <input placeholder="e.g. From $150" value={editingService.price} onChange={e => setEditingService({ ...editingService, price: e.target.value })} style={{ padding: '1.2rem', width: '100%', background: 'rgba(255,255,255,0.01)', border: '1px solid #1a1a1a', borderRadius: '15px', color: 'var(--color-gold)', fontSize: '1.1rem', fontWeight: '900', textAlign: 'center' }} />
+                                            <label style={{ color: '#444', fontSize: '0.65rem', fontWeight: '900', textTransform: 'uppercase', marginBottom: '0.8rem', display: 'block' }}>USD Rate ($)</label>
+                                            <input placeholder="150" value={editingService.price_usd || ''} onChange={e => setEditingService({ ...editingService, price_usd: e.target.value })} style={{ padding: '1.2rem', width: '100%', background: 'rgba(255,255,255,0.01)', border: '1px solid #1a1a1a', borderRadius: '15px', color: 'var(--color-gold)', fontSize: '1.1rem', fontWeight: '900', textAlign: 'center' }} />
+                                        </div>
+                                        <div className="admin-field">
+                                            <label style={{ color: '#444', fontSize: '0.65rem', fontWeight: '900', textTransform: 'uppercase', marginBottom: '0.8rem', display: 'block' }}>ETB Rate (BR)</label>
+                                            <input placeholder="18000" value={editingService.price_etb || ''} onChange={e => setEditingService({ ...editingService, price_etb: e.target.value })} style={{ padding: '1.2rem', width: '100%', background: 'rgba(255,255,255,0.01)', border: '1px solid #1a1a1a', borderRadius: '15px', color: '#4caf50', fontSize: '1.1rem', fontWeight: '900', textAlign: 'center' }} />
                                         </div>
                                     </div>
 

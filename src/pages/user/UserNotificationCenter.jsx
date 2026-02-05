@@ -11,6 +11,7 @@ const UserNotificationCenter = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const [selectedNotif, setSelectedNotif] = useState(null);
+    const [showClearConfirm, setShowClearConfirm] = useState(false);
 
     const myNotifications = userNotifications
         .filter(n => n.user_id === user?.id)
@@ -50,7 +51,7 @@ const UserNotificationCenter = () => {
                 </div>
                 {myNotifications.length > 0 && (
                     <button
-                        onClick={clearUserNotifications}
+                        onClick={() => setShowClearConfirm(true)}
                         className="btn btn-secondary"
                         style={{ color: '#ff4444', border: '1px solid rgba(255,68,68,0.2)', background: 'rgba(255,68,68,0.05)', padding: '0.5rem 1rem', fontSize: '0.75rem' }}
                     >
@@ -268,6 +269,81 @@ const UserNotificationCenter = () => {
                                         DISMISS
                                     </button>
                                 </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Clear All Confirmation Modal */}
+            <AnimatePresence>
+                {showClearConfirm && (
+                    <div className="modal active" onClick={() => setShowClearConfirm(false)} style={{ zIndex: 10000 }}>
+                        <motion.div
+                            className="modal-content glass-modal"
+                            onClick={e => e.stopPropagation()}
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            transition={{ duration: 0.2, ease: "easeOut" }}
+                            style={{
+                                maxWidth: '450px',
+                                padding: '3rem',
+                                textAlign: 'center',
+                                borderRadius: '30px',
+                                background: 'rgba(10,10,10,0.98)',
+                                border: '1px solid rgba(255,68,68,0.2)',
+                                backdropFilter: 'blur(40px)'
+                            }}
+                        >
+                            <div style={{
+                                width: '80px',
+                                height: '80px',
+                                background: 'rgba(255,68,68,0.1)',
+                                borderRadius: '25px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: '#ff4444',
+                                margin: '0 auto 2rem',
+                                border: '1px solid rgba(255,68,68,0.15)'
+                            }}>
+                                <FiTrash2 size={36} />
+                            </div>
+                            <h2 style={{ color: '#fff', fontSize: '1.8rem', marginBottom: '1rem', fontFamily: 'var(--font-heading)', fontWeight: '800' }}>Clear All Notifications?</h2>
+                            <p style={{ color: '#888', marginBottom: '2.5rem', lineHeight: '1.7', fontSize: '0.95rem' }}>
+                                This will permanently delete all {myNotifications.length} notification{myNotifications.length !== 1 ? 's' : ''} from your inbox. This action cannot be undone.
+                            </p>
+                            <div style={{ display: 'flex', gap: '1rem' }}>
+                                <button
+                                    className="btn btn-secondary"
+                                    style={{ flex: 1, padding: '1rem', borderRadius: '12px', fontWeight: '700', fontSize: '0.9rem' }}
+                                    onClick={() => setShowClearConfirm(false)}
+                                >
+                                    CANCEL
+                                </button>
+                                <button
+                                    className="btn btn-primary"
+                                    style={{
+                                        flex: 1,
+                                        padding: '1rem',
+                                        borderRadius: '12px',
+                                        background: '#ff4444',
+                                        border: 'none',
+                                        color: '#fff',
+                                        fontWeight: '900',
+                                        fontSize: '0.9rem',
+                                        letterSpacing: '0.05em'
+                                    }}
+                                    onClick={async () => {
+                                        if (user?.id) {
+                                            await clearUserNotifications(user.id);
+                                            setShowClearConfirm(false);
+                                        }
+                                    }}
+                                >
+                                    CLEAR ALL
+                                </button>
                             </div>
                         </motion.div>
                     </div>

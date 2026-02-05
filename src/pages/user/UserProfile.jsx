@@ -13,6 +13,51 @@ import {
 import { MdPerson, MdFace, MdEmojiPeople, MdBusiness } from 'react-icons/md';
 import { supabase } from '../../supabase';
 
+// Static Avatar Definition to ensure consistency across re-renders
+const EXECUTIVE_AVATARS = [
+    // 4 Young Men
+    { id: 'ym1', icon: <FaUser size={22} />, label: 'Young Man 1' },
+    { id: 'ym2', icon: <MdPerson size={24} />, label: 'Young Man 2' },
+    { id: 'ym3', icon: <FaUserGraduate size={22} />, label: 'Young Man 3' },
+    { id: 'ym4', icon: <FaUserAstronaut size={22} />, label: 'Young Man 4' },
+
+    // 4 Older Men
+    { id: 'om1', icon: <FaUserTie size={22} />, label: 'Older Man 1' },
+    { id: 'om2', icon: <FaUserSecret size={22} />, label: 'Older Man 2' },
+    { id: 'om3', icon: <FaUserDoctor size={22} />, label: 'Older Man 3' },
+    { id: 'om4', icon: <MdBusiness size={24} />, label: 'Older Man 4' },
+
+    // 4 Young Ladies
+    { id: 'yl1', icon: <FaPersonDress size={24} />, label: 'Young Lady 1' },
+    { id: 'yl2', icon: <MdFace size={24} />, label: 'Young Lady 2' },
+    { id: 'yl3', icon: <FaUserPlus size={22} />, label: 'Young Lady 3' },
+    { id: 'yl4', icon: <MdEmojiPeople size={24} />, label: 'Young Lady 4' },
+
+    // 4 Older Ladies
+    { id: 'ol1', icon: <FaUserLarge size={22} />, label: 'Older Lady 1' },
+    { id: 'ol2', icon: <FaUserNinja size={22} />, label: 'Older Lady 2' },
+    { id: 'ol3', icon: <FaPersonDress size={24} style={{ opacity: 0.8 }} />, label: 'Older Lady 3' },
+    { id: 'ol4', icon: <FaUserGear size={22} />, label: 'Older Lady 4' },
+
+    // 4 Cars
+    { id: 'car1', icon: <FaCar size={22} />, label: 'Sport Car' },
+    { id: 'car2', icon: <FaCarSide size={22} />, label: 'Sedan' },
+    { id: 'car3', icon: <FaCarOn size={22} />, label: 'EV' },
+    { id: 'car4', icon: <FaCarRear size={22} />, label: 'Coupe' },
+
+    // 4 Trucks
+    { id: 'truck1', icon: <FaTruck size={22} />, label: 'Hauler' },
+    { id: 'truck2', icon: <FaTruckFast size={22} />, label: 'Express' },
+    { id: 'truck3', icon: <FaTruckMonster size={22} />, label: 'Offroad' },
+    { id: 'truck4', icon: <FaVanShuttle size={22} />, label: 'Transporter' },
+
+    // 4 Planes
+    { id: 'plane1', icon: <FaPlane size={22} />, label: 'Private Jet' },
+    { id: 'plane2', icon: <FaPlaneUp size={22} />, label: 'Takeoff' },
+    { id: 'plane3', icon: <FaPlaneDeparture size={22} />, label: 'Departure' },
+    { id: 'plane4', icon: <FaPlaneArrival size={22} />, label: 'Arrival' }
+];
+
 const UserProfile = () => {
     const { user, refreshProfile } = useAuth();
     const { showToast } = useToast();
@@ -38,77 +83,43 @@ const UserProfile = () => {
     const [showAvatarSelector, setShowAvatarSelector] = useState(false);
     const [isEditingEmail, setIsEditingEmail] = useState(false);
 
-    // Optimized Executive Iconography - People & Vehicles
-    const avatars = React.useMemo(() => {
-        return [
-            // 4 Young Men
-            { id: 'ym1', icon: <FaUser size={22} />, label: 'Young Man 1' },
-            { id: 'ym2', icon: <MdPerson size={24} />, label: 'Young Man 2' },
-            { id: 'ym3', icon: <FaUserGraduate size={22} />, label: 'Young Man 3' },
-            { id: 'ym4', icon: <FaUserAstronaut size={22} />, label: 'Young Man 4' },
-
-            // 4 Older Men
-            { id: 'om1', icon: <FaUserTie size={22} />, label: 'Older Man 1' },
-            { id: 'om2', icon: <FaUserSecret size={22} />, label: 'Older Man 2' },
-            { id: 'om3', icon: <FaUserDoctor size={22} />, label: 'Older Man 3' },
-            { id: 'om4', icon: <MdBusiness size={24} />, label: 'Older Man 4' },
-
-            // 4 Young Ladies
-            { id: 'yl1', icon: <FaPersonDress size={24} />, label: 'Young Lady 1' },
-            { id: 'yl2', icon: <MdFace size={24} />, label: 'Young Lady 2' },
-            { id: 'yl3', icon: <FaUserPlus size={22} />, label: 'Young Lady 3' },
-            { id: 'yl4', icon: <MdEmojiPeople size={24} />, label: 'Young Lady 4' },
-
-            // 4 Older Ladies
-            { id: 'ol1', icon: <FaUserLarge size={22} />, label: 'Older Lady 1' },
-            { id: 'ol2', icon: <FaUserNinja size={22} />, label: 'Older Lady 2' },
-            { id: 'ol3', icon: <FaPersonDress size={24} style={{ opacity: 0.8 }} />, label: 'Older Lady 3' },
-            { id: 'ol4', icon: <FaUserGear size={22} />, label: 'Older Lady 4' },
-
-            // 4 Cars
-            { id: 'car1', icon: <FaCar size={22} />, label: 'Sport Car' },
-            { id: 'car2', icon: <FaCarSide size={22} />, label: 'Sedan' },
-            { id: 'car3', icon: <FaCarOn size={22} />, label: 'EV' },
-            { id: 'car4', icon: <FaCarRear size={22} />, label: 'Coupe' },
-
-            // 4 Trucks
-            { id: 'truck1', icon: <FaTruck size={22} />, label: 'Hauler' },
-            { id: 'truck2', icon: <FaTruckFast size={22} />, label: 'Express' },
-            { id: 'truck3', icon: <FaTruckMonster size={22} />, label: 'Offroad' },
-            { id: 'truck4', icon: <FaVanShuttle size={22} />, label: 'Transporter' },
-
-            // 4 Planes
-            { id: 'plane1', icon: <FaPlane size={22} />, label: 'Private Jet' },
-            { id: 'plane2', icon: <FaPlaneUp size={22} />, label: 'Takeoff' },
-            { id: 'plane3', icon: <FaPlaneDeparture size={22} />, label: 'Departure' },
-            { id: 'plane4', icon: <FaPlaneArrival size={22} />, label: 'Arrival' }
-        ];
-    }, []);
+    // Avatars moved outside component for stability
+    const avatars = EXECUTIVE_AVATARS;
 
     const handleMapSelect = (address) => {
         setNewAddress(address);
         setShowMapModal(false);
     };
 
+    const [isImageLoading, setIsImageLoading] = useState(false);
+
     React.useEffect(() => {
         if (user) {
             setFormData(prev => ({
                 ...prev,
                 name: user.name || prev.name,
-                // Check if editing to avoid overwrite
                 email: isEditingEmail ? prev.email : (user.email || prev.email),
                 phone: user.phone || prev.phone
             }));
             setVehicles(user.savedVehicles || []);
             setAddresses(user.savedAddresses || []);
 
-            // CRITICAL FIX: Prioritize database profile image over metadata (which may truncate large base64 strings)
-            const remoteImg = user.profileImg || user.user_metadata?.profile_img;
-            if (remoteImg) {
-                setProfileImg(remoteImg);
+            // IRONCLAD PERSISTENCE: Check multiple sources in order of reliability
+            const secondaryCache = localStorage.getItem(`executive_img_${user.id}`);
+            const serverImg = user.profileImg || user.user_metadata?.profile_img || secondaryCache;
+
+            if (serverImg && serverImg !== profileImg) {
+                // If we have a local selection (data:), don't overwrite it unless the server image has changed
+                if (!profileImg || !profileImg.startsWith('data:')) {
+                    setProfileImg(serverImg);
+                    // Back-sync to secondary cache if needed
+                    if (serverImg.startsWith('data:') && !secondaryCache) {
+                        localStorage.setItem(`executive_img_${user.id}`, serverImg);
+                    }
+                }
             }
         }
-    }, [user, isEditingEmail]);
+    }, [user.id, user.profileImg]);
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -116,14 +127,64 @@ const UserProfile = () => {
 
     const handleProfileImageChange = (e) => {
         const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setProfileImg(reader.result);
-                setShowAvatarSelector(false);
-            };
-            reader.readAsDataURL(file);
+        if (!file) return;
+
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+            showToast('Please select a valid image file', 'error');
+            return;
         }
+
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            showToast('Image size must be less than 5MB', 'error');
+            return;
+        }
+
+        // Use canvas to compress the image
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                // Create canvas for compression
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+
+                // EXTREME PERSISTENCE: 120px is crisp enough for icons but tiny enough for any DB/JWT limit
+                const maxSize = 120;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                    if (width > maxSize) {
+                        height *= maxSize / width;
+                        width = maxSize;
+                    }
+                } else {
+                    if (height > maxSize) {
+                        width *= maxSize / height;
+                        height = maxSize;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // Convert to base64 with maximum compression (0.4 quality)
+                const compressedBase64 = canvas.toDataURL('image/jpeg', 0.4);
+
+                // Update state
+                setIsImageLoading(true);
+                setProfileImg(compressedBase64);
+                // Immediately cache locally to survive potential sync delays
+                localStorage.setItem(`executive_img_${user.id}`, compressedBase64);
+                setShowAvatarSelector(false);
+                showToast('Image selected. Click "Authorize Updates" to save.', 'success');
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
     };
 
     const handleUpdateProfile = async (e) => {
@@ -164,8 +225,8 @@ const UserProfile = () => {
             const updates = {
                 data: {
                     display_name: formData.name,
-                    phone: formData.phone,
-                    profile_img: profileImg
+                    phone: formData.phone
+                    // Note: COMPLETELY REMOVED from Auth Metadata to prevent JWT/Session corruption
                 }
             };
             if (isEditingEmail && formData.email !== user.email) {
@@ -182,17 +243,40 @@ const UserProfile = () => {
                 .update({
                     display_name: formData.name,
                     phone: formData.phone,
-                    profile_img: profileImg,
+                    avatar_url: profileImg,
                     saved_vehicles: vehicles,
                     saved_addresses: addresses
                 })
                 .eq('id', user.id);
 
-            if (profileError) console.warn("DB Profile sync warning:", profileError.message);
+            if (profileError) throw profileError;
 
-            // 5. Update Local State (Optional override if metadata returned)
-            if (updatedAuth?.user?.user_metadata?.profile_img) {
-                setProfileImg(updatedAuth.user.user_metadata.profile_img);
+            // Sync to secondary persistent cache immediately
+            if (profileImg && profileImg.startsWith('data:')) {
+                localStorage.setItem(`executive_img_${user.id}`, profileImg);
+            }
+
+            // 5. Force-refresh the user object in localStorage and AuthContext
+            const { data: updatedProfile, error: fetchError } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', user.id)
+                .single();
+
+            if (updatedProfile) {
+                const refreshedUser = {
+                    ...user,
+                    name: updatedProfile.display_name,
+                    phone: updatedProfile.phone,
+                    role: updatedProfile.role || user.role,
+                    profileImg: updatedProfile.avatar_url || profileImg,
+                    savedVehicles: updatedProfile.saved_vehicles || [],
+                    savedAddresses: updatedProfile.saved_addresses || []
+                };
+                localStorage.setItem('supabase_user', JSON.stringify(refreshedUser));
+
+                // Force AuthContext to re-read
+                await refreshProfile();
             }
 
             if (isEditingEmail) {
@@ -202,7 +286,6 @@ const UserProfile = () => {
                 showToast('Executive profile updated and synchronized.', 'success');
             }
 
-            await refreshProfile();
             setFormData(prev => ({ ...prev, currentPassword: '' }));
         } catch (error) {
             showToast(error.message, 'error');
@@ -329,7 +412,6 @@ const UserProfile = () => {
                         <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: 'center', gap: isMobile ? '1.5rem' : '3rem', marginBottom: '3rem', paddingBottom: '2rem', borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
                             <div style={{ position: 'relative' }}>
                                 <div
-                                    onClick={() => setShowAvatarSelector(!showAvatarSelector)}
                                     style={{
                                         width: isMobile ? '100px' : '140px', height: isMobile ? '100px' : '140px', borderRadius: '30px',
                                         background: '#111',
@@ -338,15 +420,53 @@ const UserProfile = () => {
                                         boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
                                         overflow: 'hidden',
                                         border: '1px solid rgba(201,169,106,0.15)',
-                                        backgroundImage: profileImg && !avatars.find(a => a.id === profileImg) ? `url("${profileImg}")` : 'none',
-                                        backgroundSize: 'cover',
-                                        backgroundPosition: 'center',
-                                        backgroundRepeat: 'no-repeat',
                                         cursor: 'pointer'
-                                    }}>
+                                    }}
+                                    onClick={() => setShowAvatarSelector(!showAvatarSelector)}
+                                >
                                     {/* Render the selected icon or fallback */}
-                                    {(!profileImg || avatars.find(a => a.id === profileImg)) && (
-                                        profileImg ? avatars.find(a => a.id === profileImg)?.icon : (formData.name && !formData.name.includes('@') ? formData.name : user?.email || 'M').charAt(0)
+                                    {(!profileImg || avatars.find(a => a.id === profileImg)) ? (
+                                        <div style={{
+                                            transition: '0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            width: '100%', height: '100%'
+                                        }}>
+                                            {profileImg && avatars.find(a => a.id === profileImg) ? (
+                                                avatars.find(a => a.id === profileImg)?.icon
+                                            ) : (
+                                                (formData.name && !formData.name.includes('@') ? formData.name : user?.email || 'M').charAt(0)
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                                            <img
+                                                src={profileImg}
+                                                alt="Profile Identity"
+                                                style={{
+                                                    width: '100%',
+                                                    height: '100%',
+                                                    objectFit: 'cover',
+                                                    display: isImageLoading ? 'none' : 'block',
+                                                    transition: 'opacity 0.5s ease',
+                                                    opacity: isImageLoading ? 0 : 1
+                                                }}
+                                                onLoad={() => setIsImageLoading(false)}
+                                                onError={(e) => {
+                                                    console.error("Profile image load error");
+                                                    setIsImageLoading(false);
+                                                    setProfileImg(null);
+                                                }}
+                                            />
+                                            {isImageLoading && (
+                                                <div className="pulse" style={{
+                                                    width: '100%', height: '100%',
+                                                    background: 'rgba(201,169,106,0.1)',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                                }}>
+                                                    <FiLoader className="spin" style={{ color: 'var(--color-gold)', opacity: 0.5 }} />
+                                                </div>
+                                            )}
+                                        </div>
                                     )}
                                 </div>
 
@@ -681,7 +801,7 @@ const UserProfile = () => {
                         </div>
                     </div>
                 </div>
-            </div>
+            </div >
         </div >
 
     );

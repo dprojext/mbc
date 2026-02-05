@@ -8,9 +8,10 @@ import { FiX, FiActivity, FiArrowUpRight, FiDollarSign, FiUsers, FiPackage, FiSt
 import { motion, AnimatePresence } from 'framer-motion';
 
 const AdminAnalytics = () => {
-    const { bookings = [], transactions = [], users = [], analytics = [], plans = [], purgeSystemData } = useData();
+    const { bookings = [], transactions = [], users = [], analytics = [], plans = [], purgeSystemData, currency } = useData();
     const [selectedDetail, setSelectedDetail] = useState(null);
     const [viewFilter, setViewFilter] = useState('Month');
+    const [purgeTerm, setPurgeTerm] = useState('');
 
     // --- Dynamic Growth Intelligence ---
     const calculateGrowth = (list, dateKey = 'created_at', isRate = false) => {
@@ -45,7 +46,8 @@ const AdminAnalytics = () => {
 
     // Real Data Calculations
     const completedTransactions = transactions.filter(t => t.status === 'Completed' || t.status === 'Paid');
-    const totalRevenue = completedTransactions.reduce((acc, curr) => acc + (curr.amount || 0), 0);
+    const totalRevenueUsd = completedTransactions.reduce((acc, curr) => acc + (curr.amount_usd || (curr.currency === 'USD' || !curr.currency ? curr.amount : 0)), 0);
+    const totalRevenueEtb = completedTransactions.reduce((acc, curr) => acc + (curr.amount_etb || (curr.currency === 'ETB' ? curr.amount : 0)), 0);
     const activeMembers = users.filter(u => u.subscriptionPlan && u.subscriptionPlan !== 'No Active Plan').length;
 
     // Detailed Website Traffic Tracking
@@ -82,7 +84,8 @@ const AdminAnalytics = () => {
     const kpis = [
         {
             label: 'Total Revenue',
-            value: `$${totalRevenue.toLocaleString()}`,
+            value: `$${totalRevenueUsd.toLocaleString()}`,
+            secondaryValue: `ETB ${totalRevenueEtb.toLocaleString()}`,
             trend: revenueGrowth.trend,
             positive: revenueGrowth.positive,
             icon: <FiDollarSign />,
@@ -90,8 +93,8 @@ const AdminAnalytics = () => {
             details: 'Authoritative financial aggregation of all completed and verified cloud ledger entries.',
             subMetrics: [
                 { label: 'Platform Transactions', value: completedTransactions.length, icon: <FiPackage /> },
-                { label: 'Booking Revenue', value: `$${completedTransactions.filter(t => !t.plan_id).reduce((s, t) => s + (t.amount || 0), 0).toLocaleString()}`, icon: <FiActivity /> },
-                { label: 'Avg Ticket Value', value: `$${(totalRevenue / (completedTransactions.length || 1)).toFixed(2)}`, icon: <FiDollarSign /> }
+                { label: 'USD Revenue', value: `$${totalRevenueUsd.toLocaleString()}`, icon: <FiActivity /> },
+                { label: 'ETB Revenue', value: `Br ${totalRevenueEtb.toLocaleString()}`, icon: <FiDollarSign /> }
             ]
         },
         {
@@ -153,8 +156,9 @@ const AdminAnalytics = () => {
             const dateStr = date.toDateString();
             const dayStr = viewFilter === 'Day' ? date.toLocaleTimeString([], { hour: '2-digit' }) : days[date.getDay()];
             const dayViews = pageViews.filter(v => new Date(v.created_at || v.timestamp).toDateString() === dateStr).length;
-            const dayRevenue = completedTransactions.filter(t => (t.date || t.created_at) && new Date(t.date || t.created_at).toDateString() === dateStr).reduce((acc, t) => acc + (t.amount || 0), 0);
-            return { name: dayStr, visits: dayViews, revenue: dayRevenue };
+            const dayRevenueUsd = completedTransactions.filter(t => (t.date || t.created_at) && new Date(t.date || t.created_at).toDateString() === dateStr).reduce((acc, t) => acc + (t.amount_usd || (t.currency === 'USD' || !t.currency ? t.amount : 0)), 0);
+            const dayRevenueEtb = completedTransactions.filter(t => (t.date || t.created_at) && new Date(t.date || t.created_at).toDateString() === dateStr).reduce((acc, t) => acc + (t.amount_etb || (t.currency === 'ETB' ? t.amount : 0)), 0);
+            return { name: dayStr, visits: dayViews, revenueUsd: dayRevenueUsd, revenueEtb: dayRevenueEtb };
         });
     }, [pageViews, completedTransactions, viewFilter]);
 
@@ -226,8 +230,13 @@ const AdminAnalytics = () => {
                                 {kpi.trend}
                             </div>
                         </div>
-                        <div style={{ fontSize: '1.5rem', fontWeight: '600', color: '#fff', fontFamily: 'var(--font-heading)', lineHeight: 1.2 }}>{kpi.value}</div>
-                        <div style={{ color: '#555', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: '700' }}>{kpi.label}</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                            <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#fff', fontFamily: 'var(--font-heading)', lineHeight: 1 }}>{kpi.value}</div>
+                            {kpi.secondaryValue && (
+                                <div style={{ fontSize: '0.7rem', color: kpi.color, fontWeight: '900', opacity: 0.8 }}>{kpi.secondaryValue}</div>
+                            )}
+                        </div>
+                        <div style={{ color: '#555', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: '700', marginTop: '4px' }}>{kpi.label}</div>
                     </motion.div>
                 ))}
             </div>
@@ -240,7 +249,8 @@ const AdminAnalytics = () => {
                             <p style={{ color: '#444', fontSize: '0.75rem', margin: 0 }}>Detailed correlation between engagement and transactions.</p>
                         </div>
                         <div style={{ display: 'flex', gap: '1rem', fontSize: '0.7rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--color-gold)' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--color-gold)' }}></span> Revenue</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--color-gold)' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--color-gold)' }}></span> USD</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#ff9800' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ff9800' }}></span> ETB</div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#4caf50' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4caf50' }}></span> Traffic</div>
                         </div>
                     </div>
@@ -251,6 +261,10 @@ const AdminAnalytics = () => {
                                     <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="5%" stopColor="var(--color-gold)" stopOpacity={0.2} />
                                         <stop offset="95%" stopColor="var(--color-gold)" stopOpacity={0} />
+                                    </linearGradient>
+                                    <linearGradient id="colorRevEtb" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#ff9800" stopOpacity={0.15} />
+                                        <stop offset="95%" stopColor="#ff9800" stopOpacity={0} />
                                     </linearGradient>
                                     <linearGradient id="colorVis" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="5%" stopColor="#4caf50" stopOpacity={0.1} />
@@ -263,7 +277,8 @@ const AdminAnalytics = () => {
                                     contentStyle={{ background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '15px', color: '#fff', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}
                                     itemStyle={{ fontSize: '0.8rem' }}
                                 />
-                                <Area type="monotone" dataKey="revenue" stroke="var(--color-gold)" strokeWidth={4} fillOpacity={1} fill="url(#colorRev)" />
+                                <Area type="monotone" dataKey="revenueUsd" stroke="var(--color-gold)" strokeWidth={4} fillOpacity={1} fill="url(#colorRev)" />
+                                <Area type="monotone" dataKey="revenueEtb" stroke="#ff9800" strokeWidth={3} fillOpacity={1} fill="url(#colorRevEtb)" strokeDasharray="5 5" />
                                 <Area type="monotone" dataKey="visits" stroke="#4caf50" strokeWidth={3} fillOpacity={1} fill="url(#colorVis)" />
                             </AreaChart>
                         </ResponsiveContainer>
@@ -384,20 +399,44 @@ const AdminAnalytics = () => {
                             <div style={{ width: '80px', height: '80px', background: 'rgba(239,68,68,0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 2rem', color: '#ef4444' }}>
                                 <FiActivity size={35} />
                             </div>
-                            <h2 style={{ color: '#fff', fontSize: '2rem', marginBottom: '1rem', fontWeight: '800' }}>Critical Authorization</h2>
-                            <p style={{ color: '#888', lineHeight: '1.6', marginBottom: '2.5rem' }}>
-                                You are about to purge all systemic telemetry and transaction records. This action is <span style={{ color: '#ef4444', fontWeight: 'bold' }}>IRREVERSIBLE</span> and will reset all analytical counters.
+                            <h2 style={{ color: '#fff', fontSize: '2rem', marginBottom: '1rem', fontWeight: '800' }}>Systemic Reset</h2>
+                            <p style={{ color: '#888', lineHeight: '1.6', marginBottom: '2rem' }}>
+                                You are about to purge all systemic telemetry and transaction records. This action is <strong>IRREVERSIBLE</strong>.
                             </p>
+                            <div style={{ marginBottom: '2rem' }}>
+                                <label style={{ display: 'block', color: '#ef4444', fontSize: '0.65rem', fontWeight: '900', textTransform: 'uppercase', marginBottom: '0.5rem', textAlign: 'left' }}>
+                                    Type "PURGE" to authorize destruction:
+                                </label>
+                                <input
+                                    type="text"
+                                    value={purgeTerm}
+                                    onChange={(e) => setPurgeTerm(e.target.value)}
+                                    style={{
+                                        width: '100%', padding: '1rem', background: '#000', border: '1px solid #333',
+                                        borderRadius: '12px', color: '#ef4444', fontSize: '1.2rem', fontWeight: 'bold',
+                                        textAlign: 'center', outline: 'none'
+                                    }}
+                                    placeholder="PURGE"
+                                />
+                            </div>
                             <div style={{ display: 'flex', gap: '1rem' }}>
-                                <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setIsPurgeModalOpen(false)}>ABORT MISSION</button>
+                                <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => { setIsPurgeModalOpen(false); setPurgeTerm(''); }}>ABORT</button>
                                 <button
                                     className="btn btn-primary"
-                                    style={{ flex: 1.5, background: '#ef4444', color: '#fff' }}
+                                    style={{
+                                        flex: 1.5,
+                                        background: purgeTerm.trim().toUpperCase() === 'PURGE' ? '#ef4444' : '#444',
+                                        color: '#fff',
+                                        cursor: purgeTerm.trim().toUpperCase() === 'PURGE' ? 'pointer' : 'not-allowed',
+                                        opacity: purgeTerm.trim().toUpperCase() === 'PURGE' ? 1 : 0.5
+                                    }}
+                                    disabled={purgeTerm.trim().toUpperCase() !== 'PURGE'}
                                     onClick={() => {
                                         purgeSystemData();
                                         setIsPurgeModalOpen(false);
+                                        setPurgeTerm('');
                                     }}
-                                >CONFIRM PURGE</button>
+                                >AUTHORIZE PURGE</button>
                             </div>
                         </motion.div>
                     </div>
